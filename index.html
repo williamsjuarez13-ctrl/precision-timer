@@ -1678,6 +1678,17 @@ function setMode(newMode){
   }
   // Update toggle label
   document.getElementById('igSrcLbl')&&(document.getElementById('igSrcLbl').textContent=L.join(' + ')+' CANDLES · REAL OHLCV');
+  // Clear zone cards immediately so user doesn't see stale prev-mode zones during fetch
+  const clearTargets=['zBuyTitle','zBuySub','zBuyDist','zBuy4h','zBuyStop','rrRiskL','rrRewL',
+                      'zSellTitle','zSellSub','zSellDist','zSellSig','zSellRR',
+                      'hP','hName','hNextAct','hScore','hSigLbl',
+                      'tsLvl','tsDesc','tsLock','szRes','soBody','soTotal'];
+  clearTargets.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML='—';
+  });
+  const tb=document.getElementById('hTradeBanner');
+  if(tb){tb.className='ts-banner wait';tb.textContent='Loading '+newMode.toUpperCase()+' data…'}
   // Clear data and reload
   allData={};
   workingEndpoint=null; // Reset so fallback endpoints get tried fresh
