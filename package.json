@@ -1,0 +1,9 @@
+{
+  "name": "precision-timer",
+  "version": "1.0.0",
+  "description": "Real-time crypto TA dashboard with Binance proxy",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
