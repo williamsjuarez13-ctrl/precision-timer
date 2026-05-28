@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v8b · TF-anchored</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v8c · TF-anchored</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -987,7 +987,13 @@ function computeScore(d){
 
     if(regime==='BEAR'){
       // can't say "hold profits / buy" in a confirmed bear leg
-      if(score>45){score=45;signal='⚠ BEAR REGIME — '+signal.replace(/^[^A-Za-z]+/,'');sigColor='var(--amber)';}
+      if(score>45){
+        score=45;
+        // v8c: fully rewrite the label in BEAR regime so wording matches the capped score.
+        // Don't keep stale "BUY / scale in / bottom confirmed" text from the confluence engine.
+        signal='⚠ BEAR REGIME — caution, no new longs';
+        sigColor='var(--amber)';
+      }
       // MACD still rolling down -> cap harder
       if(pMacd&&pMacd.histogram<0){score=Math.min(score,38);}
       // lower highs confirm distribution
@@ -1003,6 +1009,16 @@ function computeScore(d){
       }
     }
     sc_knife=knife;
+    // v8c: in BEAR regime, soften any buy-confluence indicator row so it doesn't read as all-clear
+    if(regime==='BEAR'&&Array.isArray(inds)){
+      for(const ind of inds){
+        if(ind&&ind.name&&ind.name.indexOf('buy confluence')>=0){
+          ind.bull=false;ind.bear=true;
+          ind.name='Buy confluence (BEAR — discount only)';
+          ind.score=Math.min(ind.score,35);
+        }
+      }
+    }
     score=Math.max(0,Math.min(100,score));
   })();
 
