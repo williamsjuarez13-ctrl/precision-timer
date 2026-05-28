@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v7 · deployed</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v8 · regime-aware</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -601,9 +601,47 @@ function calcOBV(closes,volumes){
 }
 
 /* ===== SCORING FROM REAL DATA — MODE-AWARE ===== */
+/* ===== v8 REGIME LAYER — added above computeScore ===== */
+/* Classifies BULL / BEAR / RANGE from the macro timeframe (1D swing, 2H scalp)
+   then lets computeScore apply a macro veto + falling-knife guard. Pure TA. */
+function v8Ema(arr,period){
+  if(!arr||arr.length<period)return[];
+  const k=2/(period+1);const out=[];
+  let prev=arr.slice(0,period).reduce((a,b)=>a+b,0)/period;out.push(prev);
+  for(let i=period;i<arr.length;i++){prev=arr[i]*k+prev*(1-k);out.push(prev);}
+  return out;
+}
+function v8ConsecutiveRed(closes){
+  if(!closes||closes.length<2)return 0;
+  let n=0;for(let i=closes.length-1;i>0;i--){if(closes[i]<closes[i-1])n++;else break;}return n;
+}
+// closes = macro timeframe close array (raw). Returns 'BULL'|'BEAR'|'RANGE'.
+function v8ClassifyRegime(closes){
+  if(!closes||closes.length<60)return'RANGE';
+  const e50=v8Ema(closes,50);
+  const e200=v8Ema(closes,Math.min(200,closes.length-1));
+  if(!e50.length||!e200.length)return'RANGE';
+  const price=closes[closes.length-1];
+  const e50v=e50[e50.length-1],e200v=e200[e200.length-1];
+  const back=Math.max(0,e200.length-11);
+  const slope=(e200[e200.length-1]-e200[back])/e200[back];
+  if(price>e50v&&e50v>e200v&&slope>0)return'BULL';
+  if(price<e50v&&e50v<e200v&&slope<0)return'BEAR';
+  if(price<e50v&&price<e200v)return'BEAR';
+  return'RANGE';
+}
+// detect lower-highs over the macro window (bearish structure)
+function v8LowerHighs(closes,lookback=30){
+  if(!closes||closes.length<lookback)return false;
+  const idx=closes.length-1;const start=Math.max(1,idx-lookback);const highs=[];
+  for(let i=start+1;i<idx;i++)if(closes[i]>closes[i-1]&&closes[i]>closes[i+1])highs.push(closes[i]);
+  return highs.length>=2&&highs[highs.length-1]<highs[highs.length-2];
+}
+
 function computeScore(d){
   const h1=d['1h'],h4=d['4h'],h12=d['12h'],d1=d['1d'];
   if(!h4)return{score:0,signal:'NO DATA',sigColor:'var(--txt4)',indicators:[]};
+  let sc_regime='RANGE',sc_knife=false; // v8 state
 
   // Mode-aware timeframe labels
   const L=MODE_CONFIG[mode].labels; // e.g. ['1H','4H','12H','1D'] or ['15M','30M','1H','2H']
@@ -903,7 +941,44 @@ function computeScore(d){
     inds.splice(1,0,buyNote);
   }
 
-  return{score,signal,sigColor,buyPts,sellPts,sellTFs,buyTFs,rawScore,indicators:inds};
+    /* ===== v8 MACRO VETO + FALLING-KNIFE GUARD =====
+     Applied AFTER the existing signal/score logic. Uses raw macro closes
+     stashed on d.__macroCloses (highest TF) during analyzeSymbol. */
+  (function applyV8Veto(){
+    const macroCloses=d.__macroCloses;
+    if(!macroCloses||macroCloses.length<60)return; // not enough data, leave score as-is
+    const regime=v8ClassifyRegime(macroCloses);
+    const lowerHighs=v8LowerHighs(macroCloses);
+    const redDays=v8ConsecutiveRed(macroCloses);
+    const e50=v8Ema(macroCloses,50);
+    const below50=e50.length?macroCloses[macroCloses.length-1]<e50[e50.length-1]:false;
+    // primary-TF stoch for knife detection (4H swing / 30m scalp)
+    const pStoch=(h4&&h4.stoch)?h4.stoch.k:50;
+    const pMacd=(h4&&h4.macd)?h4.macd:null;
+
+    let knife=false;
+    // expose regime for the UI
+    sc_regime=regime;
+
+    if(regime==='BEAR'){
+      // can't say "hold profits / buy" in a confirmed bear leg
+      if(score>45){score=45;signal='⚠ BEAR REGIME — '+signal.replace(/^[^A-Za-z]+/,'');sigColor='var(--amber)';}
+      // MACD still rolling down -> cap harder
+      if(pMacd&&pMacd.histogram<0){score=Math.min(score,38);}
+      // lower highs confirm distribution
+      if(lowerHighs)score=Math.min(score,40);
+      // FALLING-KNIFE GUARD: oversold in bear + below 50EMA + consecutive red = DON'T buy
+      if(pStoch<25&&below50&&redDays>=2){
+        knife=true;score=Math.min(score,28);
+        signal='🔪 FALLING KNIFE — oversold in downtrend, do NOT buy';sigColor='var(--rose)';
+      }
+    }
+    sc_knife=knife;
+    score=Math.max(0,Math.min(100,score));
+  })();
+
+
+  return{score,signal,sigColor,buyPts,sellPts,sellTFs,buyTFs,rawScore,indicators:inds,regime:sc_regime,knife:sc_knife};
 }
 
 /* ===== FETCH ===== */
@@ -980,7 +1055,7 @@ async function analyzeSymbol(coin){
   const h12=buildTF(tf3raw); // structural TF (12H/1H)
   const d1=buildTF(tf4raw);  // macro TF (1D/2H)
 
-  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch};
+  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch,__macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes};
 }
 
 /* ===== STATUS ===== */
@@ -1294,6 +1369,16 @@ function updateBanner(sym){
   document.getElementById('hScore').style.color=sc.sigColor;
   document.getElementById('hSigLbl').textContent=sc.signal;
   document.getElementById('hSigLbl').style.color=sc.sigColor;
+  // v8: append regime + knife badge to the signal label
+  (function(){
+    const lbl=document.getElementById('hSigLbl');
+    if(sc.regime){
+      const rc=sc.regime==='BULL'?'var(--em)':sc.regime==='BEAR'?'var(--rose)':'var(--amber)';
+      let extra=' · <span style="font-family:var(--mono);font-size:11px;color:'+rc+'">'+sc.regime+'</span>';
+      if(sc.knife)extra+=' <span style="font-family:var(--mono);font-size:11px;color:var(--rose)">🔪 KNIFE</span>';
+      lbl.innerHTML=sc.signal+extra;
+    }
+  })();
 
   // Trade Status Banner — scale-out aware
   const tb=document.getElementById('hTradeBanner');
