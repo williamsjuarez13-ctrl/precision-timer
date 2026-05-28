@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v8 · regime-aware</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v8b · TF-anchored</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -947,7 +947,32 @@ function computeScore(d){
   (function applyV8Veto(){
     const macroCloses=d.__macroCloses;
     if(!macroCloses||macroCloses.length<60)return; // not enough data, leave score as-is
-    const regime=v8ClassifyRegime(macroCloses);
+    // v8b: anchor regime to the TRADING timeframes (4H + 12H), not the 1D macro.
+    // Read both; if either trading TF is clearly bearish, regime is BEAR.
+    const c4=d.__primaryCloses;          // 4H swing / 30m scalp
+    const c12=d.__structCloses;          // 12H swing / 1H scalp
+    function tfBear(closes,macdObj){
+      if(!closes||closes.length<55)return false;
+      const e=v8Ema(closes,50);
+      const below=e.length?closes[closes.length-1]<e[e.length-1]:false;
+      const negFalling=macdObj&&macdObj.macd<0&&macdObj.histogram<0;
+      return below&&negFalling;
+    }
+    function tfBull(closes,macdObj){
+      if(!closes||closes.length<55)return false;
+      const e=v8Ema(closes,50);
+      const above=e.length?closes[closes.length-1]>e[e.length-1]:false;
+      const posRising=macdObj&&macdObj.macd>0&&macdObj.histogram>0;
+      return above&&posRising;
+    }
+    const macd4=(h4&&h4.macd)?h4.macd:null;
+    const macd12=(h12&&h12.macd)?h12.macd:null;
+    const bear4=tfBear(c4,macd4), bear12=tfBear(c12,macd12);
+    const bull4=tfBull(c4,macd4), bull12=tfBull(c12,macd12);
+    let regime;
+    if(bear4||bear12) regime='BEAR';           // either trading TF broken = bear
+    else if(bull4&&bull12) regime='BULL';        // both trading TFs up = bull
+    else regime=v8ClassifyRegime(macroCloses);   // otherwise fall back to macro read
     const lowerHighs=v8LowerHighs(macroCloses);
     const redDays=v8ConsecutiveRed(macroCloses);
     const e50=v8Ema(macroCloses,50);
@@ -968,6 +993,10 @@ function computeScore(d){
       // lower highs confirm distribution
       if(lowerHighs)score=Math.min(score,40);
       // FALLING-KNIFE GUARD: oversold in bear + below 50EMA + consecutive red = DON'T buy
+      // v8b: bounce-in-downtrend gap — both trading TFs deeply negative & falling
+      if(macd4&&macd12&&macd4.macd<0&&macd12.macd<0&&macd4.histogram<0&&macd12.histogram<0){
+        score=Math.min(score,40);
+      }
       if(pStoch<25&&below50&&redDays>=2){
         knife=true;score=Math.min(score,28);
         signal='🔪 FALLING KNIFE — oversold in downtrend, do NOT buy';sigColor='var(--rose)';
@@ -1055,7 +1084,7 @@ async function analyzeSymbol(coin){
   const h12=buildTF(tf3raw); // structural TF (12H/1H)
   const d1=buildTF(tf4raw);  // macro TF (1D/2H)
 
-  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch,__macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes};
+  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch,__macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes,__structCloses:tf3raw.closes};
 }
 
 /* ===== STATUS ===== */
