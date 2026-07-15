@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v8c · TF-anchored</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v8e · quant</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -275,6 +275,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
       <button class="mode-btn scalp" id="modeScalpBtn" onclick="setMode('scalp')">SCALP <span class="mode-label">15m/30m/1H/2H</span></button>
     </div>
     <button class="btn btn-sm" id="rBtn" onclick="refreshAll()"><svg id="rIco" style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>Refresh</button>
+    <button class="btn btn-sm" id="logBtn" onclick="openLogMo()">📋 Log <span id="logCount" style="font-family:var(--mono);font-size:10px;color:var(--txt3)">0</span></button>
     <a class="btn btn-em btn-sm" href="https://www.tradingview.com/symbols/BINANCE-ETHUSDT/" target="_blank">TradingView ↗</a>
   </div>
 </div>
@@ -292,6 +293,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
     </div>
     <!-- Next Action line -->
     <div class="next-act" id="hNextAct">Analyzing…</div>
+    <div id="fundNote" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:4px;padding:0 10px">Funding/OI: —</div>
     <!-- Trade Status Banner -->
     <div class="ts-banner wait" id="hTradeBanner">LOADING SIGNALS…</div>
     <div class="tk-stats">
@@ -369,9 +371,10 @@ th.sorted .sa{opacity:1;color:var(--em)}
   <div class="sig-targets" id="sigTargets">—</div>
   <div class="sig-divider"></div>
   <table class="sig-stats">
-    <thead><tr><th>TP</th><th style="text-align:center">WIN RATE</th><th style="text-align:center">R:R</th><th style="text-align:center">RISK</th><th style="text-align:right">TARGET</th></tr></thead>
+    <thead><tr><th>TP</th><th style="text-align:center">EST %*</th><th style="text-align:center">R:R</th><th style="text-align:center">RISK</th><th style="text-align:right">TARGET</th></tr></thead>
     <tbody id="sigStatsBody">—</tbody>
   </table>
+  <div style="font-size:9px;color:var(--txt4);margin-top:4px;font-family:var(--mono)">*Synthetic estimates, not backtested — live signal log is accumulating real hit rates to replace these.</div>
 </div>
 
 <!-- Trade Panels -->
@@ -385,6 +388,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
       <div><label>Stop</label><input type="number" id="szS" value="1930" oninput="updatePanels()"></div>
     </div>
     <div class="sz-res" id="szRes">—</div>
+    <div id="szVol" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:5px">Vol regime: —</div>
   </div>
   <div class="pn fu d2">
     <div class="pn-t">Tiered scale-out plan</div>
@@ -411,12 +415,13 @@ th.sorted .sa{opacity:1;color:var(--em)}
       <th data-col="stoch4" onclick="doSort('stoch4')">4H Stoch <span class="sa">▲</span></th>
       <th data-col="stoch12" onclick="doSort('stoch12')">12H Stoch <span class="sa">▲</span></th>
       <th data-col="rsi1d" onclick="doSort('rsi1d')">1D RSI <span class="sa">▲</span></th>
+      <th data-col="rs" onclick="doSort('rs')">RS vs BTC <span class="sa">▲</span></th>
       <th data-col="score" class="sorted" onclick="doSort('score')">Score <span class="sa">▼</span></th>
       <th>Signal</th>
       <th>Conviction</th>
     </tr></thead>
     <tbody id="tb">
-      <tr><td colspan="11"><div class="tl"><div class="ld"></div><br>Fetching 1H + 4H + 12H + 1D candles from Binance…<div class="prog"><div class="prog-fill" id="progBar" style="width:0%"></div></div><div id="progTxt" style="margin-top:4px;font-size:10px;color:var(--txt4)">0 / 15 coins</div></div></td></tr>
+      <tr><td colspan="12"><div class="tl"><div class="ld"></div><br>Fetching 1H + 4H + 12H + 1D candles from Binance…<div class="prog"><div class="prog-fill" id="progBar" style="width:0%"></div></div><div id="progTxt" style="margin-top:4px;font-size:10px;color:var(--txt4)">0 / 15 coins</div></div></td></tr>
     </tbody>
     </table>
   </div>
@@ -429,7 +434,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 
 <div class="ft">
   All indicators computed from <b>real Binance OHLCV candles</b> — RSI(14), Stoch RSI(3,3,14,14), MACD(12,26,9), SQZMOM(20) calculated in-browser<br>
-  No simulated values · Timeframes: 1H + 4H + 12H + 1D · 4 calls per coin · Data refreshes every 60s · Not financial advice
+  No simulated values · ATR(14)-anchored zones &amp; structure pivots · Timeframes: 1H + 4H + 12H + 1D · 4 calls per coin · Data refreshes every 60s · Not financial advice
 </div>
 
 </div>
@@ -468,6 +473,24 @@ const MODE_CONFIG={
     targetPcts:[1.15,1.28,1.45],stopPct:0.91,sellPct:1.08,buyLoPct:0.97,buyHiPct:0.99},
   scalp:{tfs:['15m','30m','1h','2h'],labels:['15M','30M','1H','2H'],limits:[100,100,100,80],refresh:30000,
     targetPcts:[1.015,1.025,1.04],stopPct:0.985,sellPct:1.02,buyLoPct:0.985,buyHiPct:0.997}
+};
+
+/* ===== v8e PARAMS — single home for every tunable number (policy, not mechanism).
+   Change values here; never hardcode them downstream. ===== */
+const V8E_PARAMS={
+  atrPeriod:14,
+  // Zone geometry, per mode. R = stopATR x ATR (risk unit); TPs laddered in R-multiples.
+  swing:{stopATR:1.2, buyLoATR:0.5, buyHiATR:0.25, tpR:[1.0,2.0,3.0], sellLoATR:0.25, sellHiATR:0.75},
+  scalp:{stopATR:1.0, buyLoATR:0.35, buyHiATR:0.15, tpR:[1.0,1.8,2.8], sellLoATR:0.2, sellHiATR:0.5},
+  pivotLR:3,               // bars each side to confirm a swing pivot
+  volHighPct:75, volLowPct:25, volHighSizeMult:0.5, // vol-regime sizing overlay
+  rsBars:24,               // relative-strength lookback (primary-TF bars)
+  volTrendDemote:0.85,     // BULL demoted to RANGE below this volume ratio (v8d spec)
+  fundingCrowded:0.0005,   // |0.05%| per 8h funding threshold
+  oiCrowdedPct:15,         // OI % change over ~24h to flag crowding
+  structBonus:5,           // confluence bonus for entry at structure (never in BEAR)
+  structProxATR:0.5,       // "at structure" = within this many ATR of pivot low
+  logMax:2000, logKey:'ptSignalLog_v1'
 };
 
 /* ===== REAL TA MATH ===== */
@@ -630,6 +653,81 @@ function v8ClassifyRegime(closes){
   if(price<e50v&&price<e200v)return'BEAR';
   return'RANGE';
 }
+/* ===== v8e MATH MODULE ===== */
+// Wilder ATR. Returns {series:[...], atr:last} in price units, aligned to closes[period..].
+function calcATR(highs,lows,closes,period){
+  period=period||V8E_PARAMS.atrPeriod;
+  if(!highs||!lows||!closes||closes.length<period+2)return null;
+  const trs=[];
+  for(let i=1;i<closes.length;i++){
+    trs.push(Math.max(highs[i]-lows[i],Math.abs(highs[i]-closes[i-1]),Math.abs(lows[i]-closes[i-1])));
+  }
+  let atr=trs.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  const series=[atr];
+  for(let i=period;i<trs.length;i++){atr=(atr*(period-1)+trs[i])/period;series.push(atr);}
+  return{series,atr:series[series.length-1]};
+}
+// Confirmed swing pivots: a bar higher/lower than L bars each side. Excludes unconfirmed tail.
+function v8ePivots(highs,lows,L){
+  L=L||V8E_PARAMS.pivotLR;
+  const ph=[],pl=[];
+  if(!highs||highs.length<L*2+1)return{ph,pl};
+  for(let i=L;i<highs.length-L;i++){
+    let isH=true,isL=true;
+    for(let j=1;j<=L;j++){
+      if(highs[i]<=highs[i-j]||highs[i]<highs[i+j])isH=false;
+      if(lows[i]>=lows[i-j]||lows[i]>lows[i+j])isL=false;
+      if(!isH&&!isL)break;
+    }
+    if(isH)ph.push({i,v:highs[i]});
+    if(isL)pl.push({i,v:lows[i]});
+  }
+  return{ph,pl};
+}
+// Percentile rank (0-100) of the last ATR% (ATR/close) within its own history. Needs >=30 samples.
+function v8eVolPercentile(atrObj,closes){
+  if(!atrObj||!atrObj.series||!closes)return null;
+  const s=atrObj.series,off=closes.length-s.length;
+  if(off<0||s.length<30)return null;
+  const pcts=s.map((a,k)=>a/closes[k+off]);
+  const cur=pcts[pcts.length-1];
+  let below=0;for(const p of pcts)if(p<cur)below++;
+  return{pctile:Math.round(below/pcts.length*100),atrPct:cur*100};
+}
+// v8d: rolling %-change differential vs benchmark over N bars on the primary TF.
+function v8RelStrength(coinCloses,benchCloses,bars){
+  bars=bars||V8E_PARAMS.rsBars;
+  if(!coinCloses||!benchCloses)return null;
+  const n=Math.min(bars,coinCloses.length-1,benchCloses.length-1);
+  if(n<5)return null;
+  const cc=coinCloses[coinCloses.length-1]/coinCloses[coinCloses.length-1-n]-1;
+  const bc=benchCloses[benchCloses.length-1]/benchCloses[benchCloses.length-1-n]-1;
+  return(cc-bc)*100;
+}
+// v8d: recent 10-bar avg volume vs prior 10-bar. ratio<threshold on BULL = demote to RANGE.
+function v8VolumeTrend(volumes){
+  if(!volumes||volumes.length<20)return null;
+  const rec=volumes.slice(-10).reduce((a,b)=>a+b,0)/10;
+  const pri=volumes.slice(-20,-10).reduce((a,b)=>a+b,0)/10;
+  if(pri<=0)return null;
+  return{ratio:rec/pri};
+}
+// Weekly open from 1D candles (swing): open of the most recent Monday (UTC).
+function v8eWeeklyOpen(opens,times){
+  if(!opens||!times||opens.length!==times.length)return null;
+  for(let i=times.length-1;i>=0;i--){
+    if(new Date(times[i]).getUTCDay()===1)return opens[i];
+  }
+  return null;
+}
+// Most recent HIGHER low on a TF (last pivot low above the one before it) — structure trail anchor.
+function v8eHigherLow(highs,lows){
+  const{pl}=v8ePivots(highs,lows);
+  if(pl.length<2)return null;
+  const a=pl[pl.length-1],b=pl[pl.length-2];
+  return a.v>b.v?a.v:null;
+}
+
 // detect lower-highs over the macro window (bearish structure)
 function v8LowerHighs(closes,lookback=30){
   if(!closes||closes.length<lookback)return false;
@@ -973,6 +1071,11 @@ function computeScore(d){
     if(bear4||bear12) regime='BEAR';           // either trading TF broken = bear
     else if(bull4&&bull12) regime='BULL';        // both trading TFs up = bull
     else regime=v8ClassifyRegime(macroCloses);   // otherwise fall back to macro read
+    // v8d: volume-confirmed regime — a BULL read on fading volume is a suspect BULL. Demote.
+    if(regime==='BULL'){
+      const vt=v8VolumeTrend(d.__macroVols);
+      if(vt&&vt.ratio<V8E_PARAMS.volTrendDemote)regime='RANGE';
+    }
     const lowerHighs=v8LowerHighs(macroCloses);
     const redDays=v8ConsecutiveRed(macroCloses);
     const e50=v8Ema(macroCloses,50);
@@ -1009,6 +1112,36 @@ function computeScore(d){
       }
     }
     sc_knife=knife;
+    /* ===== v8e STRUCTURE CONFLUENCE (never active in BEAR — regime gates interpretation) =====
+       Entry at a prior confirmed pivot low is categorically better than mid-air oversold.
+       Bonus applied ONLY outside BEAR, and the veto's caps above already ran — BEAR paths untouched. */
+    (function(){
+      const sh=d.__structHighs,sl=d.__structLows,scl=d.__structCloses;
+      const atrS=calcATR(sh,sl,scl);
+      if(atrS&&atrS.atr>0){
+        const{pl}=v8ePivots(sh,sl);
+        if(pl.length){
+          const lastPL=pl[pl.length-1].v;
+          const dist=Math.abs(d.price-lastPL)/atrS.atr;
+          if(dist<=V8E_PARAMS.structProxATR){
+            const atStruct=regime!=='BEAR';
+            inds.push({tf:'🏗',name:atStruct?'Structure support (pivot low)':'Structure level (BEAR — reference only)',
+              val:fmtP(lastPL)+' · '+dist.toFixed(2)+' ATR away',bull:atStruct,bear:!atStruct,score:atStruct?70:30,
+              sub:'Last confirmed '+MODE_CONFIG[mode].labels[2]+' swing low · ATR('+V8E_PARAMS.atrPeriod+') '+fmtP(atrS.atr)});
+            if(atStruct)score=Math.min(95,score+V8E_PARAMS.structBonus);
+          }
+        }
+      }
+      // Weekly open (swing only) — display-only context row, no score impact (unbacktested inputs don't move the score)
+      if(mode==='swing'){
+        const wo=v8eWeeklyOpen(d.__macroOpens,d.__macroTimes);
+        if(wo){
+          const above=d.price>wo;
+          inds.push({tf:'W',name:'Weekly open',val:(above?'Above ':'Below ')+fmtP(wo),
+            bull:above,bear:!above,score:above?60:40,sub:'Most recent Monday open (UTC) — trend context'});
+        }
+      }
+    })();
     // v8c: in BEAR regime, soften any buy-confluence indicator row so it doesn't read as all-clear
     if(regime==='BEAR'&&Array.isArray(inds)){
       for(const ind of inds){
@@ -1063,7 +1196,8 @@ async function fetchKlines(symbol,interval,limit=100){
       const opens=klines.map(k=>parseFloat(k[1]));
       // Use the REAL current price from the last (forming) candle for display
       const currentPrice=parseFloat(lastCandle[4]);
-      return{closes,highs,lows,volumes,opens,
+      const times=klines.map(k=>k[0]);
+      return{closes,highs,lows,volumes,opens,times,
         price:currentPrice,
         open24:opens.length>6?opens[opens.length-6]:opens[0],
         high24:Math.max(...highs.slice(-6)),
@@ -1100,7 +1234,13 @@ async function analyzeSymbol(coin){
   const h12=buildTF(tf3raw); // structural TF (12H/1H)
   const d1=buildTF(tf4raw);  // macro TF (1D/2H)
 
-  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch,__macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes,__structCloses:tf3raw.closes};
+  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch,
+    __macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes,__structCloses:tf3raw.closes,
+    // v8d/v8e raw stashes — computed once here, consumed by regime/zones/sizer/trailing/RS
+    __macroVols:tf4raw.volumes,__macroOpens:tf4raw.opens,__macroTimes:tf4raw.times,
+    __rsCloses:tf2raw.closes,
+    __structHighs:tf3raw.highs,__structLows:tf3raw.lows,
+    __primaryHighs:tf2raw.highs,__primaryLows:tf2raw.lows};
 }
 
 /* ===== STATUS ===== */
@@ -1117,55 +1257,53 @@ function fmtP(v){return v>=1?'$'+v.toLocaleString('en-US',{minimumFractionDigits
 
 /* ===== DYNAMIC ZONES PER COIN — MODE-AWARE ===== */
 function calcZones(d){
+  /* v8e: zones are ATR- and structure-anchored, per mode, driven entirely by V8E_PARAMS.
+     The v7 ETH hardcode ($2,025/$2,350 ladder) is REMOVED — static levels were the April failure.
+     Anchor TF: structure TF for swing (12H), primary TF for scalp (30M).
+     Geometry: buy zone brackets the last confirmed pivot low; stop = sweet - stopATR x ATR;
+     R = sweet - stop; TPs = sweet + tpR[i] x R; sell zone brackets the last pivot high. */
   const p=d.price;
   const h4=d.h4;
-  const cfg=MODE_CONFIG[mode];
-  const dayRange=h4.high24&&h4.low24?(h4.high24-h4.low24):p*0.05;
-  const atr=dayRange;
+  const P=V8E_PARAMS[mode];
+  const useStruct=mode==='swing';
+  const hs=useStruct?d.__structHighs:d.__primaryHighs;
+  const ls=useStruct?d.__structLows:d.__primaryLows;
+  const cs=useStruct?d.__structCloses:d.__primaryCloses;
 
-  // ETH swing mode: hardcoded zones from user's analysis — but only if price is near them
-  // If ETH has moved well past the original sell zone, fall through to dynamic zones
-  if(d.coin.short==='ETH'&&mode==='swing'){
-    const originalSellHi=2300;
-    const originalBuyLo=2025;
-    // Only use hardcoded if price is within reasonable range ($1,900 - $2,400)
-    // If ETH blew past $2,400 or crashed below $1,900, recalculate dynamically
-    if(p>=1900&&p<=2400){
-      return{buyLo:2025,buyHi:2085,sweet:2050,stop:1930,t1:2350,t2:2600,t3:2900,sellLo:2250,sellHi:2300,atr};
-    }
-    // else fall through to dynamic calculation below
+  let atr=null;
+  const atrObj=(hs&&ls&&cs)?calcATR(hs,ls,cs):null;
+  if(atrObj&&atrObj.atr>0)atr=atrObj.atr;
+  // Fallback if candles are short: legacy day-range proxy (flagged via atrSource)
+  const dayRange=h4&&h4.high24&&h4.low24?(h4.high24-h4.low24):p*0.05;
+  const atrSource=atr?'atr':'range';
+  if(!atr)atr=dayRange;
+
+  // Structure anchors: last confirmed pivots; fallback to recent extremes
+  let pivotLow=null,pivotHigh=null;
+  if(hs&&ls){
+    const{ph,pl}=v8ePivots(hs,ls);
+    if(pl.length)pivotLow=pl[pl.length-1].v;
+    if(ph.length)pivotHigh=ph[ph.length-1].v;
+  }
+  if(pivotLow===null)pivotLow=ls&&ls.length?Math.min(...ls.slice(-20)):(h4.low24||p*0.97);
+  if(pivotHigh===null)pivotHigh=hs&&hs.length?Math.max(...hs.slice(-20)):(h4.high24||p*1.03);
+  // Sanity: a pivot high below the pivot low means stale structure — widen to recent extremes
+  if(pivotHigh<=pivotLow){
+    pivotLow=ls&&ls.length?Math.min(...ls.slice(-20)):pivotLow;
+    pivotHigh=hs&&hs.length?Math.max(...hs.slice(-20)):pivotLow+atr*2;
   }
 
-  if(mode==='scalp'){
-    // SCALP zones: tight percentages around current price
-    // Loose scalp: 2-4% targets, 1-2% stop
-    const recentLow=h4.low24||p*0.99;
-    const recentHigh=h4.high24||p*1.01;
-    const buyLo=+(p*0.985).toPrecision(6);    // 1.5% below current
-    const buyHi=+(p*0.997).toPrecision(6);    // 0.3% below current
-    const sweet=+(p*0.991).toPrecision(6);    // midpoint
-    const stop=+(p*0.978).toPrecision(6);     // 2.2% below = ~1-2% below sweet
-    const t1=+(p*1.015).toPrecision(6);       // +1.5%
-    const t2=+(p*1.025).toPrecision(6);       // +2.5%
-    const t3=+(p*1.04).toPrecision(6);        // +4%
-    const sellLo=+(p*1.02).toPrecision(6);    // +2%
-    const sellHi=+(p*1.035).toPrecision(6);   // +3.5%
-    return{buyLo,buyHi,sweet,stop,t1,t2,t3,sellLo,sellHi,atr};
-  }
-
-  // SWING mode: dynamic zones anchored to recent swing low/high
-  const recentLow=h4.low24||p*0.97;
-  const recentHigh=h4.high24||p*1.03;
-  const buyLo=+(recentLow-atr*0.1).toPrecision(6);
-  const buyHi=+(recentLow+atr*0.3).toPrecision(6);
-  const sweet=+(recentLow+atr*0.1).toPrecision(6);
-  const stop=+(recentLow-atr*0.5).toPrecision(6);
-  const t1=+(recentHigh+atr*0.5).toPrecision(6);
-  const t2=+(recentHigh+atr*1.5).toPrecision(6);
-  const t3=+(recentHigh+atr*3.0).toPrecision(6);
-  const sellLo=+(recentHigh-atr*0.05).toPrecision(6);
-  const sellHi=+(recentHigh+atr*0.3).toPrecision(6);
-  return{buyLo,buyHi,sweet,stop,t1,t2,t3,sellLo,sellHi,atr};
+  const buyLo=+(pivotLow-atr*P.buyLoATR).toPrecision(6);
+  const buyHi=+(pivotLow+atr*P.buyHiATR).toPrecision(6);
+  const sweet=+pivotLow.toPrecision(6);
+  const stop=+(sweet-atr*P.stopATR).toPrecision(6);
+  const R=sweet-stop; // one risk unit, ATR-defined
+  const t1=+(sweet+R*P.tpR[0]).toPrecision(6);
+  const t2=+(sweet+R*P.tpR[1]).toPrecision(6);
+  const t3=+(sweet+R*P.tpR[2]).toPrecision(6);
+  const sellLo=+(pivotHigh-atr*P.sellLoATR).toPrecision(6);
+  const sellHi=+(pivotHigh+atr*P.sellHiATR).toPrecision(6);
+  return{buyLo,buyHi,sweet,stop,t1,t2,t3,sellLo,sellHi,atr,atrSource,pivotLow,pivotHigh};
 }
 
 /* ===== UPDATE TRADE PANELS (called from updateBanner + input changes) ===== */
@@ -1225,10 +1363,32 @@ function updatePanels(){
   const riskPct=+document.getElementById('szR').value||0;
   const entry=+document.getElementById('szE').value||0;
   const stop=+document.getElementById('szS').value||0;
+  // v8e: volatility regime overlay — percentile of current ATR% within its own macro-TF history.
+  // High vol percentile = the exact conditions that force deleveraging events. Cut size FIRST.
+  let volInfo=null;
+  {
+    const aObj=calcATR(mode==='swing'?d.__structHighs:d.__primaryHighs,
+                       mode==='swing'?d.__structLows:d.__primaryLows,
+                       mode==='swing'?d.__structCloses:d.__primaryCloses);
+    volInfo=v8eVolPercentile(aObj,mode==='swing'?d.__structCloses:d.__primaryCloses);
+  }
+  const szVolEl=document.getElementById('szVol');
   if(acct&&riskPct&&entry&&stop&&entry>stop){
     const riskAmt=acct*(riskPct/100);
     const perUnit=entry-stop;
-    const qty=riskAmt/perUnit;
+    let qty=riskAmt/perUnit;
+    let volLine='Vol regime: n/a (insufficient candles)';
+    if(volInfo){
+      if(volInfo.pctile>=V8E_PARAMS.volHighPct){
+        const halfQty=qty*V8E_PARAMS.volHighSizeMult;
+        volLine='<span style="color:var(--amber)">⚠ VOL P'+volInfo.pctile+' HIGH · ATR '+volInfo.atrPct.toFixed(2)+'% — first tranche HALF size: <b>'+halfQty.toFixed(4)+' '+sym+'</b> · keep ammo for the better level</span>';
+      }else if(volInfo.pctile<=V8E_PARAMS.volLowPct){
+        volLine='<span style="color:var(--em)">Vol P'+volInfo.pctile+' LOW · ATR '+volInfo.atrPct.toFixed(2)+'% — full planned tranche OK, expect slower tape</span>';
+      }else{
+        volLine='Vol P'+volInfo.pctile+' NORMAL · ATR '+volInfo.atrPct.toFixed(2)+'% — standard tranche sizing';
+      }
+    }
+    if(szVolEl)szVolEl.innerHTML=volLine;
     document.getElementById('szRes').innerHTML='Buy <b>'+qty.toFixed(4)+' '+sym+'</b> · $'+Math.round(qty*entry).toLocaleString()+' pos · $'+Math.round(riskAmt)+' risk';
 
     // --- Scale-out planner ---
@@ -1241,6 +1401,7 @@ function updatePanels(){
     document.getElementById('soTotal').innerHTML='Total projected: <b>+$'+Math.round(totalPL).toLocaleString()+'</b> on '+qty.toFixed(4)+' '+sym;
   }else{
     document.getElementById('szRes').textContent='Enter valid values';
+    if(szVolEl)szVolEl.textContent='Vol regime: —';
     document.getElementById('soBody').textContent='—';
     document.getElementById('soTotal').textContent='—';
   }
@@ -1253,21 +1414,30 @@ function updatePanels(){
   const atTP3Ts=p>=z.t3;
   const holdingTs=p>z.buyHi&&p<z.t1;
 
+  // v8e: structure trail — the most recent HIGHER low on the primary TF. Past TP1,
+  // "exit on close below the last higher low" beats a fixed trail; trends outrun fixed ladders.
+  const structHL=v8eHigherLow(d.__primaryHighs,d.__primaryLows);
+  const pTFlbl=MODE_CONFIG[mode].labels[1];
+
   let tsVal,tsDesc,tsLockMsg;
   if(atTP3Ts){
-    // At TP3: trail tight, 0.5x ATR or TP2 whichever is higher
-    tsVal=Math.max(+(p-z.atr*0.5).toPrecision(6),z.t2);
+    // At TP3: trail tight, 0.5x ATR or TP2 whichever is higher (structure HL if higher still)
+    tsVal=Math.max(+(p-z.atr*0.5).toPrecision(6),z.t2,structHL&&structHL<p?structHL:0);
     tsDesc='Tight trail at TP3 — 0.5× ATR from '+fmtP(p);
     tsLockMsg='Final 20% runner — stop above TP2 to lock in entire gain stack';
   }else if(atTP2Ts){
-    // At TP2: trail behind TP1 or 0.8x ATR
-    tsVal=Math.max(+(p-z.atr*0.8).toPrecision(6),z.t1);
-    tsDesc='Trail after TP2 — stop above TP1 '+fmtP(z.t1);
+    // At TP2: trail behind TP1, 0.8x ATR, or the primary-TF higher low — whichever is highest below price
+    tsVal=Math.max(+(p-z.atr*0.8).toPrecision(6),z.t1,structHL&&structHL<p?structHL:0);
+    tsDesc=(structHL&&structHL<p&&structHL>=z.t1)
+      ?'Structure trail — exit on '+pTFlbl+' close below higher low '+fmtP(structHL)
+      :'Trail after TP2 — stop above TP1 '+fmtP(z.t1);
     tsLockMsg='Scaled 80% off · Final 20% trails to TP3 '+fmtP(z.t3)+' or '+fmtP(tsVal)+' stop';
   }else if(atTP1Ts){
-    // At TP1: move stop to entry (breakeven) or slightly below, 1.0x ATR
-    tsVal=Math.max(+(p-z.atr*1.0).toPrecision(6),z.sweet);
-    tsDesc='Trail after TP1 — stop at breakeven '+fmtP(z.sweet);
+    // At TP1: breakeven floor, 1.0x ATR, or the primary-TF higher low — structure wins when it is higher
+    tsVal=Math.max(+(p-z.atr*1.0).toPrecision(6),z.sweet,structHL&&structHL<p?structHL:0);
+    tsDesc=(structHL&&structHL<p&&structHL>z.sweet)
+      ?'Structure trail — exit on '+pTFlbl+' close below higher low '+fmtP(structHL)
+      :'Trail after TP1 — stop at breakeven '+fmtP(z.sweet);
     tsLockMsg='Scaled 50% off · Free trade on remaining 50% to TP2 '+fmtP(z.t2);
   }else if(holdingTs){
     // Holding zone: normal ATR trail but floored at original stop
@@ -1288,6 +1458,47 @@ function updatePanels(){
   const tsTitle=atTP3Ts?'TP3 TRAIL (FINAL RUNNER)':atTP2Ts?'TP2 TRAIL':atTP1Ts?'TP1 TRAIL (BREAKEVEN)':holdingTs?(mode==='scalp'?'SCALP TRAIL':'SWING TRAIL'):'HARD STOP';
   const titleEl=document.getElementById('tsPanelTitle');
   if(titleEl)titleEl.textContent=tsTitle;
+}
+
+/* ===== v8d/v8e FUNDING + OPEN INTEREST — crowded-leverage detector =====
+   Non-blocking; fires for the selected coin from updateBanner. FAILS LOUD:
+   the note shows "unavailable" instead of silently rendering nothing (debt item #2). */
+let __fundReqSym=null;
+async function fetchFunding(symbol){
+  const prem=await fetch('/api/futures?type=premium&symbol='+symbol).then(r=>r.ok?r.json():Promise.reject(new Error('premium HTTP '+r.status)));
+  const oi=await fetch('/api/futures?type=oi&symbol='+symbol+'&period=1h&limit=24').then(r=>r.ok?r.json():Promise.reject(new Error('oi HTTP '+r.status)));
+  const funding=parseFloat(Array.isArray(prem)?prem[0]&&prem[0].lastFundingRate:prem.lastFundingRate);
+  let oiChg=null;
+  if(Array.isArray(oi)&&oi.length>=2){
+    const first=parseFloat(oi[0].sumOpenInterest),last=parseFloat(oi[oi.length-1].sumOpenInterest);
+    if(first>0)oiChg=(last/first-1)*100;
+  }
+  return{funding,oiChg};
+}
+function loadFundingFor(sym){
+  const el=document.getElementById('fundNote');if(!el)return;
+  __fundReqSym=sym;
+  el.style.color='var(--txt4)';el.textContent='Funding/OI: loading…';
+  fetchFunding(sym).then(({funding,oiChg})=>{
+    if(__fundReqSym!==sym)return; // stale response — user switched coins
+    if(isNaN(funding)){el.textContent='Funding/OI: unavailable (bad payload)';return}
+    const f8=(funding*100).toFixed(3)+'%/8h';
+    const oiTxt=oiChg===null?'OI n/a':'OI '+(oiChg>=0?'+':'')+oiChg.toFixed(1)+'% 24h';
+    if(funding>V8E_PARAMS.fundingCrowded&&oiChg!==null&&oiChg>V8E_PARAMS.oiCrowdedPct){
+      el.style.color='var(--rose)';
+      el.textContent='⚠ CROWDED LONGS — funding +'+f8+' · '+oiTxt+' → flush risk, do not chase';
+    }else if(funding<-V8E_PARAMS.fundingCrowded&&oiChg!==null&&oiChg>0){
+      el.style.color='var(--em)';
+      el.textContent='⚡ CROWDED SHORTS — funding '+f8+' · '+oiTxt+' → squeeze fuel building';
+    }else{
+      el.style.color='var(--txt4)';
+      el.textContent='Funding '+(funding>=0?'+':'')+f8+' · '+oiTxt+' — leverage normal';
+    }
+  }).catch(e=>{
+    if(__fundReqSym!==sym)return;
+    el.style.color='var(--amber)';
+    el.textContent='Funding/OI: unavailable ('+ (e&&e.message?e.message:'proxy error')+') — check /api/futures';
+  });
 }
 
 /* ===== SIGNAL CARD (MetaSignals style) ===== */
@@ -1525,6 +1736,7 @@ function updateBanner(sym){
   document.getElementById('szS').value=Math.round(z.stop*100)/100;
   updatePanels();
   updateSignalCard();
+  loadFundingFor(sym); // v8d: non-blocking funding/OI note for the selected coin
 }
 
 let sortCol='score',sortAsc=false;
@@ -1550,6 +1762,7 @@ function getSortVal(e,col){
     case'stoch4':return e.h4.stoch?e.h4.stoch.k:0;
     case'stoch12':return e.h12&&e.h12.stoch?e.h12.stoch.k:0;
     case'rsi1d':return e.d1&&e.d1.rsi?e.d1.rsi:0;
+    case'rs':return typeof e.__rs==='number'?e.__rs:-9999;
     case'score':default:return e.score;
   }
 }
@@ -1684,12 +1897,18 @@ function closeMo(){document.getElementById('moOverlay').classList.remove('op');d
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMo()});
 
 function renderTable(){
+  // v8d: relative strength vs BTC over the last rsBars primary-TF bars
+  const bench=allData['BTCUSDT'];
+  const benchCloses=bench?bench.__rsCloses:null;
   const entries=COINS.map(c=>{
     const d=allData[c.sym];
     if(!d)return null;
     const sc=computeScore(d);
-    return{...d,...sc,coin:c};
+    const rs=benchCloses?v8RelStrength(d.__rsCloses,benchCloses):null;
+    return{...d,...sc,coin:c,__rs:rs};
   }).filter(Boolean);
+  // Star the top 3 outperformers
+  const ranked=entries.filter(e=>typeof e.__rs==='number').sort((a,b)=>b.__rs-a.__rs).slice(0,3).map(e=>e.coin.sym);
 
   // Sort
   entries.sort((a,b)=>{
@@ -1718,11 +1937,86 @@ function renderTable(){
       <td><span class="ind-mini ${s4Cls}">${s4?s4.k.toFixed(0)+'/'+s4.d.toFixed(0):'—'}</span></td>
       <td><span class="ind-mini ${s12Cls}">${s12?s12.k.toFixed(0)+'/'+s12.d.toFixed(0):'—'}</span></td>
       <td><span class="ind-mini ${rsi1dCls}">${e.d1&&e.d1.rsi!==null?e.d1.rsi.toFixed(1):'—'}</span></td>
+      <td><span class="ind-mini ${typeof e.__rs==='number'?(e.__rs>0?'bull':e.__rs<0?'bear':'neu'):'neu'}">${typeof e.__rs==='number'?((e.__rs>0?'+':'')+e.__rs.toFixed(1)+'%'+(ranked.includes(e.coin.sym)?' ★':'')):'—'}</span></td>
       <td><span class="scb ${scCls}">${e.score}</span></td>
       <td><span class="sig-click" style="font-size:11px;font-weight:700;color:${e.sigColor}" onclick="event.stopPropagation();openMo('${e.coin.sym}')">${e.signal}</span></td>
       <td><span class="conv ${e.score>=75?'conv-hi':e.score>=50?'conv-md':'conv-lo'}">${e.score>=75?'High Conviction':e.score>=50?'Medium':'Low'}</span></td>
     </tr>`
   }).join('');
+}
+
+/* ===== v8e SIGNAL LOG — the trade blotter. Every regime flip, knife, score-band
+   crossing and zone-stage transition is recorded. This is the raw material that
+   replaces the synthetic win-rate table with REAL hit rates. Fails safe + visible. ===== */
+let __prevSnap={};
+function v8eReadLog(){
+  try{return JSON.parse(localStorage.getItem(V8E_PARAMS.logKey)||'[]')}catch(e){return[]}
+}
+function v8eWriteLog(arr){
+  try{
+    if(arr.length>V8E_PARAMS.logMax)arr=arr.slice(arr.length-V8E_PARAMS.logMax);
+    localStorage.setItem(V8E_PARAMS.logKey,JSON.stringify(arr));
+  }catch(e){console.warn('signal log write failed',e)}
+  const lc=document.getElementById('logCount');if(lc)lc.textContent=arr.length;
+  return arr;
+}
+function v8eLogEvents(events){
+  if(!events.length)return;
+  v8eWriteLog(v8eReadLog().concat(events));
+}
+function v8eScoreBand(s){return s>=75?'75+':s>=55?'55-74':s>=30?'30-54':'<30'}
+function v8eZoneStage(p,z){
+  if(p>=z.t3)return'TP3';if(p>=z.t2)return'TP2';if(p>=z.t1)return'TP1';
+  if(p>z.buyHi)return'HOLDING';if(p>=z.buyLo)return'BUYZONE';return'BELOW';
+}
+function v8eSnapshotAndLog(){
+  const events=[];const now=new Date().toISOString();
+  for(const c of COINS){
+    const d=allData[c.sym];if(!d)continue;
+    let sc,z;
+    try{sc=computeScore(d);z=calcZones(d);}catch(e){continue}
+    const cur={regime:sc.regime,knife:!!sc.knife,band:v8eScoreBand(sc.score),stage:v8eZoneStage(d.price,z),mode};
+    const prev=__prevSnap[c.sym];
+    const base={t:now,sym:c.short,mode,price:+d.price.toPrecision(7),score:sc.score,regime:sc.regime,buyTFs:sc.buyTFs||0,sellTFs:sc.sellTFs||0};
+    if(prev&&prev.mode===mode){
+      if(prev.regime!==cur.regime)events.push({...base,event:'REGIME_FLIP',detail:prev.regime+'→'+cur.regime});
+      if(!prev.knife&&cur.knife)events.push({...base,event:'KNIFE_ON',detail:'falling-knife guard fired'});
+      if(prev.band!==cur.band&&cur.band==='75+')events.push({...base,event:'SCORE_75',detail:prev.band+'→75+'});
+      if(prev.band!==cur.band&&cur.band==='<30')events.push({...base,event:'SCORE_LOW',detail:prev.band+'→<30'});
+      if(prev.stage!==cur.stage)events.push({...base,event:'ZONE_'+cur.stage,detail:prev.stage+'→'+cur.stage});
+    }
+    __prevSnap[c.sym]=cur;
+  }
+  v8eLogEvents(events);
+}
+function openLogMo(){
+  const log=v8eReadLog();
+  const rows=log.slice(-60).reverse().map(e=>
+    '<tr><td style="white-space:nowrap;color:var(--txt3)">'+e.t.replace('T',' ').slice(5,19)+'</td><td><b>'+e.sym+'</b></td><td>'+e.event+'</td><td>'+fmtP(e.price)+'</td><td style="text-align:center">'+e.score+'</td><td>'+e.regime+'</td><td style="color:var(--txt3)">'+(e.detail||'')+'</td></tr>'
+  ).join('');
+  document.getElementById('moContent').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+    '<div style="font-weight:700">Signal Log <span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">'+log.length+' events · forward-test blotter</span></div>'+
+    '<div style="display:flex;gap:6px">'+
+    '<button class="btn btn-sm" onclick="v8eExportLog()">Export CSV</button>'+
+    '<button class="btn btn-sm" onclick="if(confirm(\'Clear the entire signal log?\')){v8eWriteLog([]);openLogMo()}">Clear</button>'+
+    '<button class="btn btn-sm" onclick="closeMo()">✕</button></div></div>'+
+    (log.length
+      ?'<div style="overflow:auto;max-height:60vh"><table style="width:100%;font-size:11px;font-family:var(--mono)"><thead><tr><th>Time (UTC)</th><th>Coin</th><th>Event</th><th>Price</th><th>Score</th><th>Regime</th><th>Detail</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      :'<div style="color:var(--txt3);font-size:12px;padding:20px 0">No events yet — regime flips, knife triggers, score-band crossings and zone transitions are logged automatically as data refreshes.</div>');
+  document.getElementById('moOverlay').classList.add('op');document.body.style.overflow='hidden';
+}
+function v8eExportLog(){
+  const log=v8eReadLog();if(!log.length)return;
+  const cols=['t','sym','mode','event','price','score','regime','buyTFs','sellTFs','detail'];
+  const csv=[cols.join(',')].concat(log.map(e=>cols.map(c=>{
+    const v=e[c]===undefined?'':String(e[c]);
+    return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+  }).join(','))).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='precisiontimer-signal-log-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
 }
 
 /* ===== MAIN ===== */
@@ -1753,6 +2047,7 @@ async function loadAll(){
 
   renderTable();
   updateBanner(selSym);
+  v8eSnapshotAndLog(); // v8e: diff against previous pass, record signal events
   const labels=MODE_CONFIG[mode].labels.join(' + ');
   const loadedCount=Object.keys(allData).length;
   if(failCount>0){
@@ -1820,6 +2115,9 @@ function setMode(newMode){
   const tb=document.getElementById('hTradeBanner');
   if(tb){tb.className='ts-banner wait';tb.textContent='Loading '+newMode.toUpperCase()+' data…'}
   // Clear data and reload
+  __prevSnap={}; // v8e: zone stages aren't comparable across modes — reset the diff base
+  const fn=document.getElementById('fundNote');if(fn){fn.style.color='var(--txt4)';fn.textContent='Funding/OI: —'}
+  const sv=document.getElementById('szVol');if(sv)sv.textContent='Vol regime: —';
   allData={};
   workingEndpoint=null; // Reset so fallback endpoints get tried fresh
   showSt('Switching to '+newMode.toUpperCase()+' mode…','load');
@@ -1828,6 +2126,7 @@ function setMode(newMode){
   refreshTimer=setInterval(loadAll,MODE_CONFIG[mode].refresh);
 }
 
+(function(){const lc=document.getElementById('logCount');if(lc)lc.textContent=v8eReadLog().length})();
 loadAll();
 refreshTimer=setInterval(loadAll,MODE_CONFIG[mode].refresh);
 </script>

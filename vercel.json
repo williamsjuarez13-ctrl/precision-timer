@@ -1,7 +1,11 @@
 {
   "version": 2,
+  "regions": ["fra1"],
   "functions": {
     "api/klines.js": {
+      "maxDuration": 10
+    },
+    "api/futures.js": {
       "maxDuration": 10
     }
   },
