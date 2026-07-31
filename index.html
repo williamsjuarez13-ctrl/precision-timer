@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v8e · quant</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v9 · quant</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -276,6 +276,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
     </div>
     <button class="btn btn-sm" id="rBtn" onclick="refreshAll()"><svg id="rIco" style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>Refresh</button>
     <button class="btn btn-sm" id="logBtn" onclick="openLogMo()">📋 Log <span id="logCount" style="font-family:var(--mono);font-size:10px;color:var(--txt3)">0</span></button>
+    <button class="btn btn-sm" id="expBtn" onclick="openExpectancyMo()">📈 Expectancy</button>
     <a class="btn btn-em btn-sm" href="https://www.tradingview.com/symbols/BINANCE-ETHUSDT/" target="_blank">TradingView ↗</a>
   </div>
 </div>
@@ -293,7 +294,8 @@ th.sorted .sa{opacity:1;color:var(--em)}
     </div>
     <!-- Next Action line -->
     <div class="next-act" id="hNextAct">Analyzing…</div>
-    <div id="fundNote" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:4px;padding:0 10px">Funding/OI: —</div>
+    <div id="fundNote" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:4px;padding:0 10px">Positioning: —</div>
+    <div id="flowNote" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:2px;padding:0 10px">ETF flows: loading…</div>
     <!-- Trade Status Banner -->
     <div class="ts-banner wait" id="hTradeBanner">LOADING SIGNALS…</div>
     <div class="tk-stats">
@@ -490,7 +492,27 @@ const V8E_PARAMS={
   oiCrowdedPct:15,         // OI % change over ~24h to flag crowding
   structBonus:5,           // confluence bonus for entry at structure (never in BEAR)
   structProxATR:0.5,       // "at structure" = within this many ATR of pivot low
-  logMax:2000, logKey:'ptSignalLog_v1'
+  logMax:2000, logKey:'ptSignalLog_v1',
+  /* ---- v9 FLOW MODULE (spot-ETF net flows, $M — the orthogonal non-price input) ---- */
+  flow:{
+    refreshMs:1800000,                       // 30 min — flows update once per trading day
+    scale:{ETH:{strong:250,weak:50},         // |5d sum| thresholds per coin, $M
+           BTC:{strong:1000,weak:200}},
+    posDayRatio:0.6,                         // ≥60% of last 5 days positive = consistent
+    strongOutCap:50,                         // STRONG_OUT gates score like a veto notch
+    maxAgeDays:4                             // newest row older than this = STALE, treat as down
+  },
+  /* ---- v9 POSITIONING MODULE (funding trend + OI slope, replaces snapshot check) ---- */
+  positioning:{
+    fundingBars:9,                           // 9 x 8h settlements = 3d funding trend
+    oiDays:8,                                // 8 daily OI points → 7d slope
+    fundingHot:0.0003,                       // 3d MEAN |funding| per 8h — trend, not snapshot
+    oiSlopeHot:10,                           // OI % change over 7d to confirm crowding
+    oiSlopeDelev:-6,                         // OI % change over 7d that reads as deleveraged
+    crowdedLongCap:55                        // chase-guard cap outside BEAR (BEAR caps are lower anyway)
+  },
+  /* ---- v9 EXPECTANCY ENGINE (reads the signal log; no new API calls) ---- */
+  expectancy:{minEpisodes:5, minContribN:20} // below these: show "collecting", never fake numbers
 };
 
 /* ===== REAL TA MATH ===== */
@@ -1072,9 +1094,13 @@ function computeScore(d){
     else if(bull4&&bull12) regime='BULL';        // both trading TFs up = bull
     else regime=v8ClassifyRegime(macroCloses);   // otherwise fall back to macro read
     // v8d: volume-confirmed regime — a BULL read on fading volume is a suspect BULL. Demote.
+    // v9: STRONG spot-ETF inflows are real bid that candles don't show — they lift THIS
+    // demotion only (an un-veto, never a score add; all other veto paths untouched).
     if(regime==='BULL'){
       const vt=v8VolumeTrend(d.__macroVols);
-      if(vt&&vt.ratio<V8E_PARAMS.volTrendDemote)regime='RANGE';
+      const fl=(d.coin&&flowFor(d.coin.short))||null;
+      const flowBacksBull=fl&&fl.state==='STRONG_IN';
+      if(vt&&vt.ratio<V8E_PARAMS.volTrendDemote&&!flowBacksBull)regime='RANGE';
     }
     const lowerHighs=v8LowerHighs(macroCloses);
     const redDays=v8ConsecutiveRed(macroCloses);
@@ -1112,6 +1138,24 @@ function computeScore(d){
       }
     }
     sc_knife=knife;
+
+    /* ===== v9 FLOW VETO + POSITIONING CHASE-GUARD =====
+       Layered gates, applied AFTER regime caps, BEFORE structure bonus. Fail-safe:
+       missing/STALE data changes nothing (and the UI says so — no silent degradation). */
+    (function applyV9Gates(){
+      const short=d.coin?d.coin.short:null;
+      const fl=short?flowFor(short):null;
+      if(fl&&fl.state==='STRONG_OUT'&&score>V8E_PARAMS.flow.strongOutCap){
+        score=V8E_PARAMS.flow.strongOutCap;
+        if(regime!=='BEAR'){signal='◈ ETF OUTFLOW VETO — institutions selling, no full-size longs';sigColor='var(--amber)';}
+      }
+      const pos=short?__posState[d.coin.sym||'']||__posState[short+'USDT']:null;
+      if(pos&&pos.state==='CROWDED_LONG'&&regime!=='BEAR'&&score>V8E_PARAMS.positioning.crowdedLongCap){
+        score=V8E_PARAMS.positioning.crowdedLongCap;
+        signal='⚠ CROWDED LONGS — trend intact but late, wait for flush or retest';sigColor='var(--amber)';
+      }
+    })();
+
     /* ===== v8e STRUCTURE CONFLUENCE (never active in BEAR — regime gates interpretation) =====
        Entry at a prior confirmed pivot low is categorically better than mid-air oversold.
        Bonus applied ONLY outside BEAR, and the veto's caps above already ran — BEAR paths untouched. */
@@ -1464,41 +1508,120 @@ function updatePanels(){
    Non-blocking; fires for the selected coin from updateBanner. FAILS LOUD:
    the note shows "unavailable" instead of silently rendering nothing (debt item #2). */
 let __fundReqSym=null;
-async function fetchFunding(symbol){
-  const prem=await fetch('/api/futures?type=premium&symbol='+symbol).then(r=>r.ok?r.json():Promise.reject(new Error('premium HTTP '+r.status)));
-  const oi=await fetch('/api/futures?type=oi&symbol='+symbol+'&period=1h&limit=24').then(r=>r.ok?r.json():Promise.reject(new Error('oi HTTP '+r.status)));
-  const funding=parseFloat(Array.isArray(prem)?prem[0]&&prem[0].lastFundingRate:prem.lastFundingRate);
-  let oiChg=null;
+/* ===== v9 POSITIONING MODULE =====
+   Upgrade of the v8e snapshot crowded-leverage check. Snapshot funding lies (one print
+   can be a fluke); a 3-day funding TREND plus a 7-day OI SLOPE is positioning.
+   States: CROWDED_LONG | CROWDED_SHORT | DELEVERAGED | NEUTRAL.
+   Feeds: (a) the banner note, (b) a chase-guard cap in computeScore via __posState. */
+let __posState={};   // sym → {state,fundMean,oiSlope,t} — read by computeScore, fails safe to undefined
+async function fetchPositioning(symbol){
+  const P=V8E_PARAMS.positioning;
+  const [fh,oi,prem]=await Promise.all([
+    fetch('/api/futures?type=funding-hist&symbol='+symbol+'&limit='+P.fundingBars).then(r=>r.ok?r.json():Promise.reject(new Error('funding-hist HTTP '+r.status))),
+    fetch('/api/futures?type=oi&symbol='+symbol+'&period=1d&limit='+P.oiDays).then(r=>r.ok?r.json():Promise.reject(new Error('oi HTTP '+r.status))),
+    fetch('/api/futures?type=premium&symbol='+symbol).then(r=>r.ok?r.json():null).catch(()=>null) // current print, display only
+  ]);
+  if(!Array.isArray(fh)||!fh.length)throw new Error('funding-hist: bad payload');
+  const fundMean=fh.reduce((a,r)=>a+(+r.fundingRate||0),0)/fh.length;
+  let oiSlope=null;
   if(Array.isArray(oi)&&oi.length>=2){
     const first=parseFloat(oi[0].sumOpenInterest),last=parseFloat(oi[oi.length-1].sumOpenInterest);
-    if(first>0)oiChg=(last/first-1)*100;
+    if(first>0)oiSlope=(last/first-1)*100;
   }
-  return{funding,oiChg};
+  const fundNow=prem?parseFloat(prem.lastFundingRate):NaN;
+  let state='NEUTRAL';
+  if(oiSlope!==null&&oiSlope<=P.oiSlopeDelev)state='DELEVERAGED';
+  if(fundMean>P.fundingHot&&oiSlope!==null&&oiSlope>=P.oiSlopeHot)state='CROWDED_LONG';
+  else if(fundMean<-P.fundingHot&&oiSlope!==null&&oiSlope>=0)state='CROWDED_SHORT';
+  return{state,fundMean,oiSlope,fundNow,t:Date.now()};
 }
 function loadFundingFor(sym){
   const el=document.getElementById('fundNote');if(!el)return;
   __fundReqSym=sym;
-  el.style.color='var(--txt4)';el.textContent='Funding/OI: loading…';
-  fetchFunding(sym).then(({funding,oiChg})=>{
+  el.style.color='var(--txt4)';el.textContent='Positioning: loading…';
+  fetchPositioning(sym).then(pos=>{
     if(__fundReqSym!==sym)return; // stale response — user switched coins
-    if(isNaN(funding)){el.textContent='Funding/OI: unavailable (bad payload)';return}
-    const f8=(funding*100).toFixed(3)+'%/8h';
-    const oiTxt=oiChg===null?'OI n/a':'OI '+(oiChg>=0?'+':'')+oiChg.toFixed(1)+'% 24h';
-    if(funding>V8E_PARAMS.fundingCrowded&&oiChg!==null&&oiChg>V8E_PARAMS.oiCrowdedPct){
+    __posState[sym]=pos;
+    const fm=(pos.fundMean*100).toFixed(3)+'%/8h 3d-mean';
+    const oiTxt=pos.oiSlope===null?'OI 7d n/a':'OI '+(pos.oiSlope>=0?'+':'')+pos.oiSlope.toFixed(1)+'% 7d';
+    if(pos.state==='CROWDED_LONG'){
       el.style.color='var(--rose)';
-      el.textContent='⚠ CROWDED LONGS — funding +'+f8+' · '+oiTxt+' → flush risk, do not chase';
-    }else if(funding<-V8E_PARAMS.fundingCrowded&&oiChg!==null&&oiChg>0){
+      el.textContent='⚠ CROWDED LONGS — funding '+fm+' · '+oiTxt+' → flush risk, chase-guard active';
+    }else if(pos.state==='CROWDED_SHORT'){
       el.style.color='var(--em)';
-      el.textContent='⚡ CROWDED SHORTS — funding '+f8+' · '+oiTxt+' → squeeze fuel building';
+      el.textContent='⚡ CROWDED SHORTS — funding '+fm+' · '+oiTxt+' → squeeze fuel building';
+    }else if(pos.state==='DELEVERAGED'){
+      el.style.color='var(--em)';
+      el.textContent='◎ DELEVERAGED — funding '+fm+' · '+oiTxt+' — washed positioning, healthiest tape for entries';
     }else{
       el.style.color='var(--txt4)';
-      el.textContent='Funding '+(funding>=0?'+':'')+f8+' · '+oiTxt+' — leverage normal';
+      el.textContent='Positioning neutral — funding '+fm+' · '+oiTxt;
     }
+    updatePanels(); // re-render: the chase-guard cap may now apply
   }).catch(e=>{
     if(__fundReqSym!==sym)return;
+    delete __posState[sym]; // fail SAFE: no data = no cap, and say so
     el.style.color='var(--amber)';
-    el.textContent='Funding/OI: unavailable ('+ (e&&e.message?e.message:'proxy error')+') — check /api/futures';
+    el.textContent='Positioning: unavailable ('+(e&&e.message?e.message:'proxy error')+') — check /api/futures';
   });
+}
+
+/* ===== v9 FLOW MODULE =====
+   Spot-ETF daily net flows via /api/etf (Farside). The one input in the stack that is
+   NOT a transform of price. Classified into:
+   STRONG_IN | IN | FLAT | OUT | STRONG_OUT | STALE (source down / data too old).
+   Wiring is layered-veto, not score-blend: STRONG_OUT caps score (veto notch);
+   STRONG_IN lifts ONLY the v8d volume-demotion (a documented un-veto). ETH/BTC only —
+   other coins get flow=null and are untouched. */
+let __etfFlow={};    // 'ETH'/'BTC' → {state,sum5,sum20,lastDate,ageDays,t}
+function v9ClassifyFlow(days,short){
+  const P=V8E_PARAMS.flow;
+  const scale=P.scale[short];if(!scale)return null;
+  if(!days||days.length<5)return{state:'STALE',sum5:null,sum20:null,lastDate:null,ageDays:null};
+  const last=days[days.length-1];
+  const ageDays=Math.floor((Date.now()-new Date(last.date+'T00:00:00Z').getTime())/86400000);
+  const last5=days.slice(-5),last20=days.slice(-20);
+  const sum5=+last5.reduce((a,d)=>a+d.total,0).toFixed(1);
+  const sum20=+last20.reduce((a,d)=>a+d.total,0).toFixed(1);
+  const posRatio=last5.filter(d=>d.total>0).length/last5.length;
+  let state='FLAT';
+  if(ageDays>P.maxAgeDays)state='STALE';
+  else if(sum5>=scale.strong&&posRatio>=P.posDayRatio)state='STRONG_IN';
+  else if(sum5<=-scale.strong&&(1-posRatio)>=P.posDayRatio)state='STRONG_OUT';
+  else if(sum5>=scale.weak)state='IN';
+  else if(sum5<=-scale.weak)state='OUT';
+  return{state,sum5,sum20,lastDate:last.date,ageDays};
+}
+async function refreshEtfFlows(){
+  for(const short of ['ETH','BTC']){
+    try{
+      const r=await fetch('/api/etf?symbol='+short);
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      __etfFlow[short]={...v9ClassifyFlow(j.days,short),t:Date.now()};
+    }catch(e){
+      __etfFlow[short]={state:'STALE',sum5:null,sum20:null,lastDate:null,ageDays:null,t:Date.now(),err:(e&&e.message)||'fetch failed'};
+    }
+  }
+  updateFlowNote();updatePanels();
+}
+function flowFor(short){return __etfFlow[short]||null}
+function updateFlowNote(){
+  const el=document.getElementById('flowNote');if(!el)return;
+  const sym=allData[selSym]?allData[selSym].coin.short:selSym.replace(/USDT$/,'');
+  const f=flowFor(sym);
+  if(!f){el.style.color='var(--txt4)';el.textContent='ETF flows: n/a for '+sym;return}
+  if(f.state==='STALE'){
+    el.style.color='var(--amber)';
+    el.textContent='⚠ ETF FLOW SOURCE '+(f.err?'DOWN ('+f.err+')':'STALE — last row '+f.lastDate)+' — flow gates inactive';
+    return;
+  }
+  const s5=(f.sum5>=0?'+':'')+f.sum5+'M 5d',s20=(f.sum20>=0?'+':'')+f.sum20+'M 20d';
+  if(f.state==='STRONG_IN'){el.style.color='var(--em)';el.textContent='◈ ETF STRONG INFLOWS — '+s5+' · '+s20+' — institutional bid confirmed';}
+  else if(f.state==='STRONG_OUT'){el.style.color='var(--rose)';el.textContent='◈ ETF STRONG OUTFLOWS — '+s5+' · '+s20+' — flow veto active, no full-size longs';}
+  else if(f.state==='IN'){el.style.color='var(--em)';el.textContent='◈ ETF inflows — '+s5+' · '+s20;}
+  else if(f.state==='OUT'){el.style.color='var(--amber)';el.textContent='◈ ETF outflows — '+s5+' · '+s20;}
+  else{el.style.color='var(--txt4)';el.textContent='◈ ETF flows flat — '+s5+' · '+s20;}
 }
 
 /* ===== SIGNAL CARD (MetaSignals style) ===== */
@@ -1737,6 +1860,7 @@ function updateBanner(sym){
   updatePanels();
   updateSignalCard();
   loadFundingFor(sym); // v8d: non-blocking funding/OI note for the selected coin
+  updateFlowNote();    // v9: flow badge for the selected coin (ETH/BTC; others show n/a)
 }
 
 let sortCol='score',sortAsc=false;
@@ -1977,18 +2101,140 @@ function v8eSnapshotAndLog(){
     try{sc=computeScore(d);z=calcZones(d);}catch(e){continue}
     const cur={regime:sc.regime,knife:!!sc.knife,band:v8eScoreBand(sc.score),stage:v8eZoneStage(d.price,z),mode};
     const prev=__prevSnap[c.sym];
-    const base={t:now,sym:c.short,mode,price:+d.price.toPrecision(7),score:sc.score,regime:sc.regime,buyTFs:sc.buyTFs||0,sellTFs:sc.sellTFs||0};
+    // v9: every event carries flow + positioning state so expectancy can slice by them
+    const fl=flowFor(c.short),pos=__posState[c.sym];
+    const base={t:now,sym:c.short,mode,price:+d.price.toPrecision(7),score:sc.score,regime:sc.regime,buyTFs:sc.buyTFs||0,sellTFs:sc.sellTFs||0,
+      flow:fl&&fl.state!=='STALE'?fl.state:null,pos:pos?pos.state:null};
+    // v9: compact structural-TF indicator snapshot (r/s/m/q booleans) — the raw material
+    // for the contribution table that decides which oscillator gets pruned. Data first, then cut.
+    const h12=d['12h']||d.h12;
+    const ind=h12?{
+      r:h12.rsi!==null&&h12.rsi<40?1:0,
+      s:h12.stoch&&(h12.stoch.k<30||(h12.stoch.k<50&&h12.stoch.k>h12.stoch.d))?1:0,
+      m:h12.macd&&h12.macd.histogram>0?1:0,
+      q:h12.sqz&&(h12.sqz.positive||h12.sqz.rising)?1:0
+    }:null;
     if(prev&&prev.mode===mode){
       if(prev.regime!==cur.regime)events.push({...base,event:'REGIME_FLIP',detail:prev.regime+'→'+cur.regime});
       if(!prev.knife&&cur.knife)events.push({...base,event:'KNIFE_ON',detail:'falling-knife guard fired'});
       if(prev.band!==cur.band&&cur.band==='75+')events.push({...base,event:'SCORE_75',detail:prev.band+'→75+'});
       if(prev.band!==cur.band&&cur.band==='<30')events.push({...base,event:'SCORE_LOW',detail:prev.band+'→<30'});
-      if(prev.stage!==cur.stage)events.push({...base,event:'ZONE_'+cur.stage,detail:prev.stage+'→'+cur.stage});
+      if(prev.stage!==cur.stage)events.push({...base,event:'ZONE_'+cur.stage,detail:prev.stage+'→'+cur.stage,...(cur.stage==='BUYZONE'&&ind?{ind}:{})});
     }
     __prevSnap[c.sym]=cur;
   }
   v8eLogEvents(events);
 }
+/* ===== v9 EXPECTANCY ENGINE =====
+   Turns the blotter into measured edge. An EPISODE = a ZONE_BUYZONE entry, resolved by
+   the FIRST subsequent stage event for the same sym+mode:
+     → ZONE_TP1/TP2/TP3 = win at +1R/+2R/+3R (zone geometry defines R, so R is exact)
+     → ZONE_BELOW       = loss at -1R (price fell through the zone; stop sits 1 stopATR under)
+     → nothing yet      = OPEN (excluded from stats)
+   Zero new API calls — resolution uses transitions the log already captures.
+   Slices: per REGIME (the load-bearing table), per FLOW state, indicator contribution. */
+function v9BuildEpisodes(log){
+  const open={},episodes=[];
+  const R_FOR={ZONE_TP1:1,ZONE_TP2:2,ZONE_TP3:3};
+  for(const e of log){
+    const key=e.sym+'|'+e.mode;
+    if(e.event==='ZONE_BUYZONE'){
+      open[key]={entry:e,t:e.t};continue;
+    }
+    if(!open[key])continue;
+    if(R_FOR[e.event]!==undefined){
+      episodes.push({entry:open[key].entry,exit:e,r:R_FOR[e.event],win:true});delete open[key];
+    }else if(e.event==='ZONE_BELOW'){
+      episodes.push({entry:open[key].entry,exit:e,r:-1,win:false});delete open[key];
+    }
+    // ZONE_HOLDING and non-zone events don't resolve an episode
+  }
+  return{episodes,openCount:Object.keys(open).length};
+}
+function v9Stats(eps){
+  const n=eps.length;if(!n)return null;
+  const wins=eps.filter(e=>e.win),losses=eps.filter(e=>!e.win);
+  const hit=wins.length/n;
+  const avgWin=wins.length?wins.reduce((a,e)=>a+e.r,0)/wins.length:0;
+  const avgLoss=losses.length?Math.abs(losses.reduce((a,e)=>a+e.r,0)/losses.length):0;
+  const expectancy=hit*avgWin-(1-hit)*avgLoss;
+  const grossW=wins.reduce((a,e)=>a+e.r,0),grossL=Math.abs(losses.reduce((a,e)=>a+e.r,0));
+  const pf=grossL>0?grossW/grossL:(grossW>0?Infinity:0);
+  return{n,hit,avgWin,avgLoss,expectancy,pf};
+}
+function v9GroupStats(eps,keyFn){
+  const groups={};
+  for(const e of eps){const k=keyFn(e)||'—';(groups[k]=groups[k]||[]).push(e)}
+  return Object.entries(groups).map(([k,v])=>({key:k,...v9Stats(v)})).sort((a,b)=>b.n-a.n);
+}
+/* Contribution: for each indicator flag captured at entry, expectancy WITH flag on vs off.
+   The oscillator whose on/off split shows no expectancy separation at n≥minContribN is the
+   redundancy candidate — that's the pruning decision, made by data, not by taste. */
+function v9Contribution(eps){
+  const withInd=eps.filter(e=>e.entry.ind);
+  const names={r:'RSI<40',s:'StochRSI os/curl',m:'MACD hist>0',q:'SQZMOM pos/rising'};
+  return Object.keys(names).map(k=>{
+    const on=v9Stats(withInd.filter(e=>e.entry.ind[k]===1));
+    const off=v9Stats(withInd.filter(e=>e.entry.ind[k]===0));
+    return{key:k,name:names[k],on,off,n:withInd.length,
+      sep:(on&&off)?on.expectancy-off.expectancy:null};
+  });
+}
+function v9FmtStats(s){
+  if(!s)return'<td colspan="5" style="color:var(--txt4)">—</td>';
+  const pf=s.pf===Infinity?'∞':s.pf.toFixed(2);
+  const eCol=s.expectancy>0?'var(--em)':s.expectancy<0?'var(--rose)':'var(--txt3)';
+  return'<td style="text-align:center">'+s.n+'</td><td style="text-align:center">'+(s.hit*100).toFixed(0)+'%</td>'+
+    '<td style="text-align:center">+'+s.avgWin.toFixed(2)+'R / -'+s.avgLoss.toFixed(2)+'R</td>'+
+    '<td style="text-align:center;color:'+eCol+';font-weight:700">'+(s.expectancy>=0?'+':'')+s.expectancy.toFixed(2)+'R</td>'+
+    '<td style="text-align:center">'+pf+'</td>';
+}
+function openExpectancyMo(){
+  const P=V8E_PARAMS.expectancy;
+  const log=v8eReadLog();
+  const{episodes,openCount}=v9BuildEpisodes(log);
+  const head='<tr><th style="text-align:left">Slice</th><th>N</th><th>Hit</th><th>Avg W/L</th><th>Expectancy</th><th>PF</th></tr>';
+  let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+    '<div style="font-weight:700">Expectancy <span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">'+
+    episodes.length+' closed · '+openCount+' open · from the live blotter, not backtest</span></div>'+
+    '<button class="btn btn-sm" onclick="closeMo()">✕</button></div>';
+  if(episodes.length<P.minEpisodes){
+    html+='<div style="color:var(--txt3);font-size:12px;padding:16px 0">Collecting — '+episodes.length+' of '+P.minEpisodes+
+      ' closed episodes needed before stats are shown. Episodes accumulate automatically as buy-zone entries resolve to TP or below-zone. No synthetic numbers.</div>';
+  }else{
+    const all=v9Stats(episodes);
+    const T=(title,rows)=>'<div style="font-weight:700;font-size:12px;margin:14px 0 6px">'+title+'</div>'+
+      '<table style="width:100%;font-size:11px;font-family:var(--mono)"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
+    html+=T('Overall','<tr><td>ALL</td>'+v9FmtStats(all)+'</tr>');
+    html+=T('By regime at entry — the table that decides sizing',
+      v9GroupStats(episodes,e=>e.entry.regime).map(g=>'<tr><td>'+g.key+'</td>'+v9FmtStats(g)+'</tr>').join(''));
+    const flowRows=v9GroupStats(episodes.filter(e=>e.entry.flow),e=>e.entry.flow);
+    html+=T('By ETF flow state at entry',flowRows.length
+      ?flowRows.map(g=>'<tr><td>'+g.key+'</td>'+v9FmtStats(g)+'</tr>').join('')
+      :'<tr><td colspan="6" style="color:var(--txt4)">No episodes with flow data yet (flow logging started in v9)</td></tr>');
+    // Contribution table — the pruning decision
+    const contrib=v9Contribution(episodes);
+    const contribN=contrib.length?contrib[0].n:0;
+    if(contribN>=P.minContribN){
+      html+='<div style="font-weight:700;font-size:12px;margin:14px 0 6px">Indicator contribution (flag ON vs OFF at entry)</div>'+
+        '<table style="width:100%;font-size:11px;font-family:var(--mono)"><thead><tr><th style="text-align:left">Indicator</th><th>Exp. ON</th><th>Exp. OFF</th><th>Separation</th></tr></thead><tbody>'+
+        contrib.map(c=>{
+          const sep=c.sep===null?'—':(c.sep>=0?'+':'')+c.sep.toFixed(2)+'R';
+          const flag=c.sep!==null&&Math.abs(c.sep)<0.1?' <span style="color:var(--amber)">← redundancy candidate</span>':'';
+          return'<tr><td>'+c.name+'</td><td style="text-align:center">'+(c.on?(c.on.expectancy>=0?'+':'')+c.on.expectancy.toFixed(2)+'R (n'+c.on.n+')':'—')+
+            '</td><td style="text-align:center">'+(c.off?(c.off.expectancy>=0?'+':'')+c.off.expectancy.toFixed(2)+'R (n'+c.off.n+')':'—')+
+            '</td><td style="text-align:center">'+sep+flag+'</td></tr>'}).join('')+'</tbody></table>'+
+        '<div style="font-size:10px;color:var(--txt4);margin-top:6px">An indicator whose ON/OFF expectancy separation stays under ±0.10R is not adding information — prune it in params, don\'t keep paying its whipsaw cost.</div>';
+    }else{
+      html+='<div style="font-size:11px;color:var(--txt3);margin-top:12px">Indicator contribution: collecting ('+contribN+' of '+P.minContribN+
+        ' snapshot-tagged episodes). The prune-one-oscillator decision waits for this table — measured, not guessed.</div>';
+    }
+    html+='<div style="font-size:10px;color:var(--txt4);margin-top:12px">R is exact by construction (zones ladder TPs in R-multiples of the ATR stop). Losses resolve at -1R when price exits below the buy zone. Open episodes are excluded until resolved.</div>';
+  }
+  document.getElementById('moContent').innerHTML=html;
+  document.getElementById('moOverlay').classList.add('op');document.body.style.overflow='hidden';
+}
+
 function openLogMo(){
   const log=v8eReadLog();
   const rows=log.slice(-60).reverse().map(e=>
@@ -2129,6 +2375,8 @@ function setMode(newMode){
 (function(){const lc=document.getElementById('logCount');if(lc)lc.textContent=v8eReadLog().length})();
 loadAll();
 refreshTimer=setInterval(loadAll,MODE_CONFIG[mode].refresh);
+refreshEtfFlows(); // v9: flows update once per trading day → poll every 30 min
+setInterval(refreshEtfFlows,V8E_PARAMS.flow.refreshMs);
 </script>
 </body>
 </html>
