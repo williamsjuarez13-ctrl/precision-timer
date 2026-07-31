@@ -10,6 +10,7 @@
 // TYPES (whitelisted — nothing else is reachable through this proxy):
 //   type=premium → current funding rate        → { lastFundingRate, markPrice, source }
 //   type=oi      → open interest history       → [ { timestamp, sumOpenInterest }, ... ] oldest-first
+//   type=funding-hist → settled funding rates  → [ { timestamp, fundingRate }, ... ] oldest-first (v9)
 //
 // The client only computes % change on OI, so mixed units (Binance=coins, OKX=USD) are fine.
 
@@ -33,6 +34,12 @@ async function binanceOI(symbol, period, limit) {
   return d.map(r => ({ timestamp: r.timestamp, sumOpenInterest: r.sumOpenInterest }));
 }
 
+async function binanceFundingHist(symbol, limit) {
+  const d = await fetchJson(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}&limit=${limit}`);
+  if (!Array.isArray(d)) throw new Error('Non-array funding history');
+  return d.map(r => ({ timestamp: +r.fundingTime, fundingRate: +r.fundingRate }));
+}
+
 // ---- OKX fallback (symbol ETHUSDT → instId ETH-USDT-SWAP, ccy ETH) ----
 function okxIds(symbol) {
   const base = symbol.replace(/USDT$/, '');
@@ -44,6 +51,14 @@ async function okxPremium(symbol) {
   if (d.code !== '0' || !d.data || !d.data[0]) throw new Error('OKX funding: bad payload');
   return { lastFundingRate: d.data[0].fundingRate, markPrice: null, source: 'okx' };
 }
+async function okxFundingHist(symbol, limit) {
+  const { instId } = okxIds(symbol);
+  const d = await fetchJson(`https://www.okx.com/api/v5/public/funding-rate-history?instId=${instId}&limit=${limit}`);
+  if (d.code !== '0' || !Array.isArray(d.data)) throw new Error('OKX funding history: bad payload');
+  // OKX rows newest-first → normalize oldest-first
+  return d.data.reverse().map(r => ({ timestamp: +r.fundingTime, fundingRate: +r.fundingRate }));
+}
+
 async function okxOI(symbol, period, limit) {
   const { ccy } = okxIds(symbol);
   const p = OKX_PERIODS[period] || '1H';
@@ -69,8 +84,8 @@ export default async function handler(req, res) {
 
   const { type, symbol, period = '1h', limit = 24 } = req.query;
 
-  if (type !== 'premium' && type !== 'oi') {
-    return res.status(400).json({ error: 'Invalid type. Use: premium | oi' });
+  if (type !== 'premium' && type !== 'oi' && type !== 'funding-hist') {
+    return res.status(400).json({ error: 'Invalid type. Use: premium | oi | funding-hist' });
   }
   // Uppercase alphanumerics ending in USDT (all tracked pairs are USDT-quoted)
   if (!symbol || !/^[A-Z0-9]{2,15}USDT$/.test(symbol)) {
@@ -81,8 +96,9 @@ export default async function handler(req, res) {
   }
   const lim = Math.min(Math.max(parseInt(limit) || 24, 2), 200);
 
-  const chain = type === 'premium'
-    ? [() => binancePremium(symbol), () => okxPremium(symbol)]
+  const chain =
+    type === 'premium' ? [() => binancePremium(symbol), () => okxPremium(symbol)]
+    : type === 'funding-hist' ? [() => binanceFundingHist(symbol, lim), () => okxFundingHist(symbol, lim)]
     : [() => binanceOI(symbol, period, lim), () => okxOI(symbol, period, lim)];
 
   let lastError = 'No sources tried';
