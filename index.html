@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v9.2 · quant</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v9.3 · quant</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -1311,6 +1311,39 @@ function computeScore(d){
     score=Math.max(0,Math.min(100,score));
   })();
 
+  /* ===== v9.3 DISPLAY ROWS (no score impact — unbacktested inputs don't move the score) ===== */
+  (function(){
+    // Estimated liquidation shelves from the leverage model
+    const pc_=d.__primaryCloses,pv_=d.__primaryVols,ph_=d.__primaryHighs,pl_=d.__primaryLows;
+    if(pc_&&pv_&&ph_&&pl_){
+      const aO=calcATR(ph_,pl_,pc_);
+      if(aO&&aO.atr>0){
+        const lq=v93LiqShelves(pc_,pv_,d.price,aO.atr);
+        if(lq){
+          if(lq.longShelf!==null){
+            const dpct=(d.price-lq.longShelf)/d.price*100;
+            inds.push({tf:'💧',name:'Long-liq shelf (est)',val:fmtP(lq.longShelf)+' · '+dpct.toFixed(1)+'% below',
+              bull:dpct>6,bear:dpct<=3,score:dpct>6?58:dpct<=3?38:50,
+              sub:'Leverage-model estimate, not exchange data · magnet/cascade zone · strength '+Math.round(lq.longStr*100)+'% of downside density'});
+          }
+          if(lq.shortBand!==null){
+            const upct=(lq.shortBand-d.price)/d.price*100;
+            inds.push({tf:'💧',name:'Short-liq fuel (est)',val:fmtP(lq.shortBand)+' · '+upct.toFixed(1)+'% above',
+              bull:upct<=4,bear:false,score:upct<=4?62:50,
+              sub:'Leverage-model estimate · squeeze target if reclaimed · strength '+Math.round(lq.shortStr*100)+'% of upside density'});
+          }
+        }
+      }
+    }
+    // ETHBTC regime (global, daily) — context for how far a signal generalizes
+    if(__ethbtc){
+      inds.push({tf:'Ξ/₿',name:'ETHBTC regime',val:__ethbtc.state+' · '+(__ethbtc.pctVsEma>=0?'+':'')+__ethbtc.pctVsEma.toFixed(1)+'% vs EMA50',
+        bull:__ethbtc.state==='ETH LEADING',bear:__ethbtc.state==='ETH LAGGING',
+        score:__ethbtc.state==='ETH LEADING'?62:__ethbtc.state==='ETH LAGGING'?38:50,
+        sub:'Daily ETHBTC vs EMA50 (10d slope '+(__ethbtc.slope10>=0?'+':'')+__ethbtc.slope10.toFixed(1)+'%) — ETH-specific vs market-wide move'});
+    }
+  })();
+
   return{score,signal,sigColor,buyPts,sellPts,sellTFs,buyTFs,rawScore,indicators:inds,regime:sc_regime,knife:sc_knife};
 }
 
@@ -1393,7 +1426,7 @@ async function analyzeSymbol(coin){
     __macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes,__structCloses:tf3raw.closes,
     // v8d/v8e raw stashes — computed once here, consumed by regime/zones/sizer/trailing/RS
     __macroVols:tf4raw.volumes,__macroOpens:tf4raw.opens,__macroTimes:tf4raw.times,
-    __rsCloses:tf2raw.closes,
+    __rsCloses:tf2raw.closes,__primaryVols:tf2raw.volumes,
     __structHighs:tf3raw.highs,__structLows:tf3raw.lows,
     __primaryHighs:tf2raw.highs,__primaryLows:tf2raw.lows};
 }
@@ -1659,6 +1692,57 @@ let __fundReqSym=null;
    States: CROWDED_LONG | CROWDED_SHORT | DELEVERAGED | NEUTRAL.
    Feeds: (a) the banner note, (b) a chase-guard cap in computeScore via __posState. */
 let __posState={};   // sym → {state,fundMean,oiSlope,t} — read by computeScore, fails safe to undefined
+/* ===== v9.3 ETHBTC REGIME (display-only) =====
+   "Is this an ETH move or a crypto move?" — ETHBTC vs its own EMA50 + slope.
+   Daily data: refresh at most every 30 min, piggybacking loadAll. Fails safe to null. */
+let __ethbtc=null; // {state,pctVsEma,slope10,t}
+async function refreshEthBtc(){
+  try{
+    if(__ethbtc&&Date.now()-__ethbtc.t<1800000)return; // 30-min staleness guard
+    const raw=await fetchKlines('ETHBTC','1d',80);
+    const cs=raw.closes;if(!cs||cs.length<55)return;
+    const m=2/51;let e=cs[0];const es=[e];
+    for(let i=1;i<cs.length;i++){e=cs[i]*m+e*(1-m);es.push(e)}
+    const last=cs[cs.length-1],ema=es[es.length-1];
+    const pct=(last-ema)/ema*100;
+    const slope=(es[es.length-1]-es[es.length-11])/es[es.length-11]*100; // EMA50 10d slope
+    const state=pct>0&&slope>0?'ETH LEADING':pct<0&&slope<0?'ETH LAGGING':'MIXED';
+    __ethbtc={state,pctVsEma:pct,slope10:slope,t:Date.now()};
+  }catch(e){/* fail safe — row simply doesn't render */}
+}
+/* ===== v9.3 LIQUIDATION SHELF ESTIMATOR (display-only, leverage model) =====
+   NOT exchange heatmap data (that needs a paid aggregator API). Model: perp entries cluster
+   at volume-weighted price nodes; long liqs project BELOW entries at ~1/lev distances
+   (50x ~1.9%, 25x ~3.8%, 10x ~9.5%), short liqs ABOVE. Recency-decayed volume weighting.
+   Strongest density bin below spot = long-liq shelf (support magnet / cascade risk);
+   strongest above = short-liq fuel (squeeze target). Aug '26: shelf $1,821 marked the bottom,
+   fuel >$1,997 powered the squeeze — this estimates that map from candles alone. */
+function v93LiqShelves(closes,vols,price,atr){
+  if(!closes||!vols||closes.length<40||!(atr>0))return null;
+  const N=Math.min(closes.length,120);
+  const cs=closes.slice(-N),vs=vols.slice(-N);
+  const TIERS=[[0.019,0.45],[0.038,0.35],[0.095,0.20]]; // [distance, weight] ≈ 50x/25x/10x
+  const bin=atr*0.25;if(!(bin>0))return null;
+  const density={}; // liq-price bin -> {long:w, short:w}
+  for(let i=0;i<cs.length;i++){
+    const w=vs[i]*Math.pow(0.5,(cs.length-1-i)/60); // recency half-life 60 bars
+    if(!(w>0))continue;
+    for(const[dist,tw]of TIERS){
+      const lq=Math.round(cs[i]*(1-dist)/bin), sq=Math.round(cs[i]*(1+dist)/bin);
+      (density[lq]=density[lq]||{long:0,short:0}).long+=w*tw;
+      (density[sq]=density[sq]||{long:0,short:0}).short+=w*tw;
+    }
+  }
+  let longShelf=null,shortBand=null,maxL=0,maxS=0,totL=0,totS=0;
+  for(const k in density){
+    const px=k*bin,d=density[k];
+    if(px<price){totL+=d.long;if(d.long>maxL){maxL=d.long;longShelf=px}}
+    if(px>price){totS+=d.short;if(d.short>maxS){maxS=d.short;shortBand=px}}
+  }
+  if(longShelf===null&&shortBand===null)return null;
+  return{longShelf,shortBand,
+    longStr:totL>0?maxL/totL:0,shortStr:totS>0?maxS/totS:0}; // strength = share of side's density
+}
 async function fetchPositioning(symbol){
   const P=V8E_PARAMS.positioning;
   const [fh,oi,prem]=await Promise.all([
@@ -2427,6 +2511,7 @@ function v8eExportLog(){
 
 /* ===== MAIN ===== */
 async function loadAll(){
+  refreshEthBtc(); // v9.3: non-blocking, self-throttled to 30 min
   showSt('Fetching Binance '+mode.toUpperCase()+' data…','load');
   const prog=document.getElementById('progBar');
   const progTxt=document.getElementById('progTxt');
