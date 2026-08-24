@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v9 · quant</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v9.1 · quant</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -1337,6 +1337,30 @@ function calcZones(d){
     pivotHigh=hs&&hs.length?Math.max(...hs.slice(-20)):pivotLow+atr*2;
   }
 
+  /* ===== v9.1 DYNAMIC RE-ANCHOR (stale-ladder guard) =====
+     Failure mode this fixes: after a fast trend leg, the last CONFIRMED pivot low sits far
+     below spot, so the whole TP ladder (sweet + R x tpR) prints BELOW current price —
+     "targets from the past." Re-anchor when price has consumed the entire ladder:
+     pick the freshest pivot low within reach (4 ATR below spot); if none confirmed yet
+     (vertical move, pivots lag by pivotLR bars), trail on the recent structural low. */
+  let reanchored=false,extended=false;
+  const ladderTopATR=P.stopATR*P.tpR[P.tpR.length-1]; // full ladder height in ATR units
+  if(p>pivotLow+atr*ladderTopATR){
+    let na=null;
+    if(hs&&ls){
+      const pv2=v8ePivots(hs,ls);
+      for(let k=pv2.pl.length-1;k>=0;k--){const v=pv2.pl[k].v;if(v<p&&v>p-atr*4){na=v;break}}
+    }
+    if(na===null&&ls&&ls.length){
+      const tl=Math.min(...ls.slice(-(V8E_PARAMS.pivotLR*2+4)));
+      if(tl<p&&tl>p-atr*4)na=tl; // trailing low only if within reach; else synthetic below
+    }
+    if(na===null)na=p-atr*1.5; // synthetic trailing anchor: never leave the ladder in the past
+    pivotLow=na;reanchored=true;
+  }
+  // Expected-local-top broken: project the sell zone as an ATR extension above spot
+  if(p>pivotHigh){pivotHigh=p+atr*0.75;extended=true;}
+
   const buyLo=+(pivotLow-atr*P.buyLoATR).toPrecision(6);
   const buyHi=+(pivotLow+atr*P.buyHiATR).toPrecision(6);
   const sweet=+pivotLow.toPrecision(6);
@@ -1347,7 +1371,16 @@ function calcZones(d){
   const t3=+(sweet+R*P.tpR[2]).toPrecision(6);
   const sellLo=+(pivotHigh-atr*P.sellLoATR).toPrecision(6);
   const sellHi=+(pivotHigh+atr*P.sellHiATR).toPrecision(6);
-  return{buyLo,buyHi,sweet,stop,t1,t2,t3,sellLo,sellHi,atr,atrSource,pivotLow,pivotHigh};
+  /* v9.1 roll-forward: per-TP hit flags + next actionable targets.
+     hits[] preserves ladder semantics for zone-stage / expectancy continuity;
+     next[] = unhit ladder targets, padded with ATR-extension targets so the
+     dashboard ALWAYS shows at least 3 live targets above spot. */
+  const hits=[p>=t1,p>=t2,p>=t3];
+  const next=[];
+  [[t1,'TP1'],[t2,'TP2'],[t3,'TP3']].forEach(pair=>{if(p<pair[0])next.push({price:pair[0],label:pair[1],ext:false})});
+  let ek=0;
+  while(next.length<3){ek++;next.push({price:+(Math.max(t3,p)+atr*1.5*ek).toPrecision(6),label:'EXT'+ek,ext:true});}
+  return{buyLo,buyHi,sweet,stop,t1,t2,t3,sellLo,sellHi,atr,atrSource,pivotLow,pivotHigh,reanchored,extended,hits,next};
 }
 
 /* ===== UPDATE TRADE PANELS (called from updateBanner + input changes) ===== */
@@ -1359,7 +1392,7 @@ function updatePanels(){
   const sc=computeScore(d);
 
   // --- Buy zone card ---
-  document.getElementById('zBuyTitle').innerHTML=fmtP(z.buyLo)+' – '+fmtP(z.buyHi)+' <span class="he">(Sweet '+fmtP(z.sweet)+')</span>';
+  document.getElementById('zBuyTitle').innerHTML=fmtP(z.buyLo)+' – '+fmtP(z.buyHi)+' <span class="he">(Sweet '+fmtP(z.sweet)+')</span>'+(z.reanchored?' <span style="color:var(--amber);font-size:10px" title="Prior ladder fully consumed — zone re-anchored to freshest structure">RE-ANCHORED ⟳</span>':'');
   const stoch=d.h4.stoch;const rsi=d.h4.rsi;
   const primaryTFLabel=MODE_CONFIG[mode].labels[1]; // "4H" in swing, "30M" in scalp
   const subParts=[];
@@ -1390,7 +1423,8 @@ function updatePanels(){
   }
 
   // --- Sell zone card ---
-  document.getElementById('zSellTitle').innerHTML=fmtP(z.sellLo)+' – '+fmtP(z.sellHi)+' <span class="hr">(Target '+fmtP(z.t1)+')</span>';
+  const liveTgt=(z.next&&z.next.length)?z.next[0].price:z.t1; // v9.1: first UNHIT target, never a past one
+  document.getElementById('zSellTitle').innerHTML=fmtP(z.sellLo)+' – '+fmtP(z.sellHi)+' <span class="hr">(Target '+fmtP(liveTgt)+')</span>'+(z.extended?' <span style="color:var(--amber);font-size:10px" title="Prior local top broken — sell zone projected +0.75 ATR above spot">ATR-PROJECTED ⤴</span>':'');
   const sellSub=mode==='scalp'
     ?'Quick rejection expected · '+MODE_CONFIG[mode].labels[1]+'/'+MODE_CONFIG[mode].labels[2]+' Stoch overbought'
     :MODE_CONFIG[mode].labels[1]+' Stoch RSI overbought rollover expected · MACD histogram peak zone';
@@ -1711,16 +1745,31 @@ function updateSignalCard(){
       {label:'TARGET 3',price:z.t3,rr:risk>0?((z.t3-z.sweet)/risk).toFixed(1):0}
     ];
   }
+  // v9.1: mark consumed ladder targets as HIT and surface ATR-extension targets
+  if(z.hits){
+    tpData=tpData.map(function(t,i){return z.hits[i]?Object.assign({},t,{rr:'HIT'}):t});
+    if(z.next){
+      z.next.filter(function(n){return n.ext}).slice(0,2).forEach(function(n,k){
+        tpData.push({label:'EXT '+(k+1)+' ⤴',price:n.price,rr:risk>0?((n.price-z.sweet)/risk).toFixed(1):'—'});
+      });
+    }
+  }
   document.getElementById('sigTargets').innerHTML=tpData.map(t=>
     `<div class="sig-tp"><span class="tp-label">${t.label}</span><div><span class="tp-price">${fmtP(t.price)}</span><span class="tp-rr">${typeof t.rr==='string'&&t.rr==='HIT'?'✓':'RR '+t.rr}${typeof t.rr==='string'&&t.rr.includes(':')?'':typeof t.rr==='string'&&t.rr==='HIT'?'':':1'}</span></div></div>`
   ).join('');
 
   // Stats table — show for both long and exit cards
   const statsData=[
-    {tp:'TP1',wr:Math.min(94,72+bTFs*5+sc.score*.1).toFixed(0),pf:(1.2+bTFs*.3).toFixed(1),risk:fmtP(risk),tgt:fmtP(z.t1)},
-    {tp:'TP2',wr:Math.min(82,55+bTFs*4+sc.score*.08).toFixed(0),pf:(1.0+bTFs*.25).toFixed(1),risk:fmtP(risk),tgt:fmtP(z.t2)},
-    {tp:'TP3',wr:Math.min(68,38+bTFs*3+sc.score*.06).toFixed(0),pf:(0.8+bTFs*.2).toFixed(1),risk:fmtP(risk),tgt:fmtP(z.t3)}
+    {tp:z.hits&&z.hits[0]?'TP1 ✓':'TP1',wr:Math.min(94,72+bTFs*5+sc.score*.1).toFixed(0),pf:(1.2+bTFs*.3).toFixed(1),risk:fmtP(risk),tgt:(z.hits&&z.hits[0]?'✓ ':'')+fmtP(z.t1)},
+    {tp:z.hits&&z.hits[1]?'TP2 ✓':'TP2',wr:Math.min(82,55+bTFs*4+sc.score*.08).toFixed(0),pf:(1.0+bTFs*.25).toFixed(1),risk:fmtP(risk),tgt:(z.hits&&z.hits[1]?'✓ ':'')+fmtP(z.t2)},
+    {tp:z.hits&&z.hits[2]?'TP3 ✓':'TP3',wr:Math.min(68,38+bTFs*3+sc.score*.06).toFixed(0),pf:(0.8+bTFs*.2).toFixed(1),risk:fmtP(risk),tgt:(z.hits&&z.hits[2]?'✓ ':'')+fmtP(z.t3)}
   ];
+  // v9.1: append live extension targets when the ladder is fully/partly consumed
+  if(z.next){
+    z.next.filter(function(n){return n.ext}).slice(0,2).forEach(function(n,k){
+      statsData.push({tp:'EXT'+(k+1)+' ⤴',wr:'—',pf:'—',risk:fmtP(risk),tgt:fmtP(n.price)});
+    });
+  }
   document.getElementById('sigStatsBody').innerHTML=statsData.map(r=>
     `<tr><td>${r.tp}</td><td style="text-align:center">${r.wr}%</td><td style="text-align:center">${r.pf}</td><td style="text-align:center">${r.risk}</td><td style="text-align:right">${r.tgt}</td></tr>`
   ).join('');
