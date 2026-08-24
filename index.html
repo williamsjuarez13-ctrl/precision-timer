@@ -267,7 +267,7 @@ th.sorted .sa{opacity:1;color:var(--em)}
 <div class="hdr fu">
   <div class="logo">
     <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v9.1 · quant</small></div>
+    <div class="logo-t">Precision<span>Timer</span> <small>v9.2 · quant</small></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <div class="mode-toggle">
@@ -1199,6 +1199,117 @@ function computeScore(d){
     score=Math.max(0,Math.min(100,score));
   })();
 
+
+  /* ===== v9.2 TURN-DETECTION MODULE =====
+     Aug '26 replay findings this addresses:
+     - TOP ($2,547): stochs pinned overbought from $2,200 (sell cried wolf for days); the real tells
+       were EXTENSION (price >3 ATR above EMA20) + exhaustion-range bar + momentum divergence.
+     - BOTTOM ($1,869): higher-low retest of the $1,854 washout — structure SEQUENCE, invisible to
+       oscillators (nothing oversold at the launch bar).
+     All computed from candle arrays already fetched. Bounded score deltas; badges in breakdown. */
+  (function(){
+    const ph_=d.__primaryHighs,pl_=d.__primaryLows,pc_=d.__primaryCloses;
+    if(!ph_||!pl_||!pc_||pc_.length<40)return;
+    const L2=MODE_CONFIG[mode].labels[1];
+    function emaArr(v,n){const o=[];const m=2/(n+1);for(let i=0;i<v.length;i++)o.push(i?v[i]*m+o[i-1]*(1-m):v[i]);return o}
+    function rsiArr(v,n){n=n||14;const o=new Array(v.length).fill(null);let g=0,l=0;
+      for(let i=1;i<v.length;i++){const ch=v[i]-v[i-1],up=Math.max(ch,0),dn=Math.max(-ch,0);
+        if(i<=n){g+=up;l+=dn;if(i===n){g/=n;l/=n;o[i]=100-100/(1+(l?g/l:1e9))}}
+        else{g=(g*(n-1)+up)/n;l=(l*(n-1)+dn)/n;o[i]=100-100/(1+(l?g/l:1e9))}}return o}
+    const atrO=calcATR(ph_,pl_,pc_);if(!atrO||!(atrO.atr>0))return;
+    const atr=atrO.atr,p_=d.price,r_=rsiArr(pc_);
+
+    // --- 1) EXTENSION GAUGE (stretch meter): price distance from EMA20 in ATR units ---
+    const e20=emaArr(pc_,20);
+    const ext=(p_-e20[e20.length-1])/atr;
+    const extHot=ext>=3,extCold=ext<=-3;
+    inds.push({tf:L2,name:'Extension (EMA20 dist)',val:ext.toFixed(1)+' ATR',
+      bull:extCold,bear:extHot,score:extHot?20:extCold?80:50,
+      sub:extHot?'>3 ATR stretched — blow-off risk, chasing here is late':extCold?'<-3 ATR washed — capitulation zone':'normal range'});
+    if(extHot)score=Math.max(0,score-8);
+    if(extCold)score=Math.min(100,score+6);
+
+    // --- 2) EXHAUSTION / CLIMAX BAR (last CLOSED bar): range >2.2x ATR closing off the extreme ---
+    const n_=pc_.length;
+    if(n_>=3){
+      const hi=ph_[n_-2],lo=pl_[n_-2],cl=pc_[n_-2],rng=hi-lo;
+      if(rng>atr*2.2){
+        const posInBar=(cl-lo)/rng; // 0=closed at low, 1=closed at high
+        if(posInBar<0.33&&p_>e20[e20.length-1]){ // huge bar closing weak while extended = top exhaustion
+          inds.push({tf:L2,name:'Exhaustion bar (top)',val:(rng/atr).toFixed(1)+'x ATR range',bull:false,bear:true,score:20,
+            sub:'Climax range, closed in bottom third — buyer exhaustion'});
+          score=Math.max(0,score-6);
+        }else if(posInBar>0.67&&p_<e20[e20.length-1]){ // huge bar closing strong while depressed = capitulation reversal
+          inds.push({tf:L2,name:'Capitulation bar (bottom)',val:(rng/atr).toFixed(1)+'x ATR range',bull:true,bear:false,score:80,
+            sub:'Climax range, closed in top third — seller exhaustion'});
+          score=Math.min(100,score+6);
+        }
+      }
+    }
+
+    // --- 3) MOMENTUM DIVERGENCE at pivots (primary TF, recency-gated) ---
+    const pv=v8ePivots(ph_,pl_);
+    function lastTwo(a){return a.length>=2?[a[a.length-2],a[a.length-1]]:null}
+    const RECENT=12; // pivot must be within 12 bars of now to act on it
+    const pls=lastTwo(pv.pl),phs=lastTwo(pv.ph);
+    // Zone filter: divergence only counts from stretched territory (first pivot RSI <=38 for bull,
+    // >=68 for bear). Mid-range "divergences" (e.g. RSI 64->62) are noise — Aug '26 replay proof.
+    if(pls&&pls[1].i>=n_-RECENT&&r_[pls[0].i]!==null&&r_[pls[1].i]!==null&&r_[pls[0].i]<=38){
+      if(pls[1].v<pls[0].v&&r_[pls[1].i]>r_[pls[0].i]){
+        inds.push({tf:L2,name:'Bullish divergence',val:'price LL · RSI HL',bull:true,bear:false,score:82,
+          sub:fmtP(pls[0].v)+'→'+fmtP(pls[1].v)+' vs RSI '+r_[pls[0].i].toFixed(0)+'→'+r_[pls[1].i].toFixed(0)});
+        score=Math.min(100,score+(sc_regime==='BEAR'?4:8));
+      }
+    }
+    if(phs&&phs[1].i>=n_-RECENT&&r_[phs[0].i]!==null&&r_[phs[1].i]!==null&&r_[phs[0].i]>=68){
+      if(phs[1].v>phs[0].v&&r_[phs[1].i]<r_[phs[0].i]){
+        inds.push({tf:L2,name:'Bearish divergence',val:'price HH · RSI LH',bull:false,bear:true,score:18,
+          sub:fmtP(phs[0].v)+'→'+fmtP(phs[1].v)+' vs RSI '+r_[phs[0].i].toFixed(0)+'→'+r_[phs[1].i].toFixed(0)});
+        score=Math.max(0,score-10);
+      }
+    }
+
+    // --- 4) STRUCTURE SEQUENCE (struct TF): higher-low retest = the Aug-16 bottom pattern ---
+    const sh_=d.__structHighs,sl_=d.__structLows,scl_=d.__structCloses;
+    if(sh_&&sl_&&scl_){
+      const atrS=calcATR(sh_,sl_,scl_);
+      const pvS=v8ePivots(sh_,sl_);
+      const plsS=lastTwo(pvS.pl);
+      if(atrS&&atrS.atr>0&&plsS){
+        const higherLow=plsS[1].v>plsS[0].v;
+        const nearRetest=Math.abs(p_-plsS[1].v)/atrS.atr<=1.0;
+        if(higherLow&&nearRetest&&sc_regime!=='BEAR'){
+          inds.push({tf:'🏗',name:'Higher-low retest',val:fmtP(plsS[0].v)+' → '+fmtP(plsS[1].v),bull:true,bear:false,score:78,
+            sub:'Pivot sequence rising & price at retest — structural bottom pattern'});
+          score=Math.min(100,score+6);
+        }else if(plsS[1].v<plsS[0].v){ // lower-low sequence: informational only
+          inds.push({tf:'🏗',name:'Structure sequence',val:'lower lows',bull:false,bear:true,score:35,
+            sub:'Pivot lows still declining — no basing yet'});
+        }
+      }
+    }
+
+    // --- 5) SELL-SIDE TREND GATE: overbought only counts on MACD-hist ROLLOVER ---
+    // (fixes "sell from $2,200": stoch pinned + hist EXPANDING = trend, not top)
+    const hst=(function(){const f=emaArr(pc_,12),s=emaArr(pc_,26);const ln=f.map((v,i)=>v-s[i]);const sg=emaArr(ln,9);return ln.map((v,i)=>v-sg[i])})();
+    const hN=hst.length;
+    if(hN>=4&&hst[hN-2]>0){
+      const rolling=hst[hN-2]<hst[hN-3]&&hst[hN-3]<hst[hN-4];
+      const stoch4=d.h4&&d.h4.stoch;
+      if(stoch4&&stoch4.k>70){
+        if(!rolling){
+          inds.push({tf:L2,name:'Trend gate',val:'OB but hist expanding',bull:true,bear:false,score:62,
+            sub:'Overbought in an EXPANDING trend — sell pressure discounted (rollover not confirmed)'});
+          score=Math.min(100,score+5);
+        }else{
+          inds.push({tf:L2,name:'Trend gate',val:'OB + hist rolling 2 bars',bull:false,bear:true,score:25,
+            sub:'Overbought AND momentum rolling over — sell signal validated'});
+          score=Math.max(0,score-5);
+        }
+      }
+    }
+    score=Math.max(0,Math.min(100,score));
+  })();
 
   return{score,signal,sigColor,buyPts,sellPts,sellTFs,buyTFs,rawScore,indicators:inds,regime:sc_regime,knife:sc_knife};
 }
