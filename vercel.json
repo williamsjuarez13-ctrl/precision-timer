@@ -1,13 +1,11 @@
 {
   "version": 2,
   "regions": ["fra1"],
+  "git": { "deploymentEnabled": { "pt-data": false } },
   "functions": {
-    "api/klines.js": {
-      "maxDuration": 10
-    },
-    "api/futures.js": {
-      "maxDuration": 10
-    }
+    "api/klines.js": { "maxDuration": 10 },
+    "api/futures.js": { "maxDuration": 10 },
+    "api/board.js": { "maxDuration": 60 }
   },
   "headers": [
     {

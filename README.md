@@ -1,21 +1,99 @@
-# PrecisionTimer
+# PrecisionTimer v11 — the measured board
 
-Real-time crypto TA dashboard with Swing/Scalp modes.
+v11 replaces the score with things that were measured on six years of history and still held in
+the most recent three: a market trend state with an exposure gate, a rank of the top coins, calibrated price ranges and
+level-touch probabilities, breakout events filtered by rank — and a ledger that freezes every
+forecast and scores it later, so the tool keeps checking itself. Why: [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
-Live: https://precision-timer-three.vercel.app/
+| Page | What it is |
+|---|---|
+| `/` (`index.html`) | The measured board |
+| `/classic.html` | Your v9.3 dashboard with its bugs fixed (v9.4). Zones and intraday view; its score is not validated. |
 
-## v9 — Orthogonal inputs + measurement layer
+## Deploy (about 10 minutes)
 
-**New: `/api/etf`** — spot-ETF daily net flows (Farside, browser-header fetch, 30-min edge cache). Fails loud (502 → UI shows SOURCE DOWN); never serves stale-as-fresh.
+**1. Upload the files.** Unzip. In GitHub open the repo → **Add file → Upload files** → drag in
+everything *inside* the `precision-timer-v11` folder → **Commit changes**. This replaces
+`index.html`, `vercel.json` and `package.json`, and adds the rest. Vercel redeploys by itself; the
+board works straight away (it computes on demand until step 2 is done).
 
-**Upgraded: `/api/futures`** — new `type=funding-hist` (Binance → OKX chain). The crowded-leverage check is now a 3-day funding trend + 7-day OI slope → CROWDED_LONG / CROWDED_SHORT / DELEVERAGED / NEUTRAL, replacing the snapshot read.
+> The `.github` folder is hidden on a Mac. In Finder press **Cmd + Shift + .** to show it before
+> dragging. If it still did not upload, create the two files by hand: **Add file → Create new file**,
+> name it `.github/workflows/pt-scan.yml`, paste the contents of that file from the zip, commit;
+> repeat for `.github/workflows/pt-calibrate.yml`.
 
-**Gates (layered, never blended):**
-- ETF STRONG_OUT → score capped at `flow.strongOutCap` (veto notch)
-- ETF STRONG_IN → lifts ONLY the v8d volume-demotion (documented un-veto)
-- CROWDED_LONG outside BEAR → chase-guard cap at `positioning.crowdedLongCap`
-- Missing/stale data → no gate fires, UI says so (fail-safe + visible)
+**2. Start the hourly scan.** Repo → **Actions** tab (enable workflows if asked) → **PrecisionTimer
+scan** → **Run workflow**. A green tick and a new `pt-data` branch mean it worked; the board's status
+chip changes to "hourly scan". From then on it runs every hour by itself.
+If the *Publish* step fails with a permission error: **Settings → Actions → General → Workflow
+permissions → Read and write permissions → Save**, then run it again.
 
-**Expectancy engine (📈 header button)** — builds trade episodes from the existing zone-transition blotter (BUYZONE → TP1/2/3 = +1/2/3R, → BELOW = −1R; zero new API calls). Tables: overall, per-regime (the sizing table), per-flow-state, and indicator ON/OFF contribution. The prune-one-oscillator decision waits for the contribution table at n≥20 — measured, not guessed. Below minimums it says "collecting"; no synthetic numbers, ever.
+**3. Alerts on your phone (optional).** In Telegram, message **@BotFather** → `/newbot` → copy the
+token. Send your new bot any message, then open
+`https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the number after `"chat":{"id":`.
+Repo → **Settings → Secrets and variables → Actions → New repository secret**, twice:
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Without this, alerts still appear on the board.
 
-All v9 tunables live in `V8E_PARAMS` (flow / positioning / expectancy blocks) — policy in one home, mechanism downstream.
+**4. Make it yours.** Edit `pt.config.js` in GitHub (pencil icon): `holdings`, `track`, and `watch`
+— e.g. `{ sym: 'ETH', level: 1450, label: 'Aave liquidation' }` to see, and be alerted on, how
+likely that level is to trade.
+
+## What you will get on Telegram
+
+- **Exposure gate ON / OFF** at the daily close, with what followed that state historically.
+- **One event digest per day** (ignitions and coils in leaders), each with its measured record and a frozen plan.
+- **Watch levels**: crossed, or 30-day touch probability above your threshold.
+- **A holding changes rank tier** (confirmed over two closes).
+- **A daily summary at 14:00 UTC.** If it stops arriving, the scan is broken — that is its job.
+- **Scan failed**, with the reason. The board also shows a red banner and the age of its data.
+
+## Iterating
+
+The rule for every change: *measure it on the later period before it reaches the screen — then let
+the live scorecard confirm it.* (The later period is a fair test only for ideas you had before
+looking at it; the scorecard is the one test nobody can tune to.)
+
+| To try… | Do this | Then |
+|---|---|---|
+| a different rank, gate or universe rule | edit `pt.config.js` | Actions → **PrecisionTimer calibrate** → Run workflow; read `model/REPORT.md` |
+| a new rank factor | add one line to `FACTORS` in `engine/rank.js`, name it in `pt.config.js` | same |
+| a new event | add a detector to `engine/detectors.js` | same — it appears in the report by rank tier; list it under `alerts.events` only if it earns it |
+| a forward test of the whole pipeline | `npm run paper -- --from 2026-01-01` (see the header of `scripts/paper-run.js`) | compare the scorecard it prints |
+
+If the “since 2024” rows do not improve, the idea did not work. The calibrate workflow also
+runs every Monday so the model never goes stale; the board warns if it is more than 60 days old or
+if the config was changed without re-measuring.
+
+## Layout
+
+```
+pt.config.js            policy — every tunable rule (the only file you normally edit)
+model/model.js          measurements — generated by calibrate, never edited
+model/REPORT.md         the same, readable
+engine/                 the maths, shared by the page, the scan, the endpoint and the backtest
+  series.js rank.js regime.js detectors.js forecast.js board.js ledger.js live.js data.js
+scripts/calibrate.js    backtest + measurement → model/
+scripts/scan.js         hourly: board, ledger, scoring, alerts → pt-data branch
+scripts/paper-run.js    replays the real scan over a past window
+api/board.js            on-demand board (fallback when the scan is not running)
+index.html              the board            classic.html   v9.4
+test/                   npm test — no look-ahead, live/backtest parity, ledger, scan
+tools/patch-classic.mjs every change made to v9.3, as code
+```
+
+Local: `npm test`, `npm run scan -- --data-dir data`, `npm run dev` then open
+`http://localhost:8787/?data=data`. Needs Node 22.
+
+## Verified, and not
+
+Run here before shipping: the 17 tests; calibration on 208,429 coin-days (downloaded and
+offline paths, same result); the scan live against the market; the scan replayed daily over 678
+days; the workflow's git steps against a local repository; both pages in a browser with live data.
+
+**Not run here — first deploy is the test:** the Vercel build of `api/board.js`, the two GitHub
+Actions workflows on GitHub's runners (including whether Binance's public data host is reachable
+from them — if not, the scan takes the board from your own Vercel endpoint and candles from your Frankfurt proxy), and Telegram delivery.
+After step 2, check the first run is green.
+
+Not financial advice. The board states what has happened historically after conditions like
+today's; it cannot know what happens next.

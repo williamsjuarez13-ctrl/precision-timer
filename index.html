@@ -3,2625 +3,315 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PrecisionTimer · Crypto Swing & Scalp Timer</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<title>PrecisionTimer · Measured Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#030711;--bg2:#080e1e;--bg3:#0c1528;
---card:#0a1220;--card-h:#121f38;--border:#172240;--border-h:#1e3058;
---em:#34d399;--em2:#6ee7b7;--em-bg:rgba(52,211,153,.06);--em-bg2:rgba(52,211,153,.12);
---rose:#fb7185;--rose-bg:rgba(251,113,133,.06);--rose-bg2:rgba(251,113,133,.12);
---amber:#fbbf24;--amber-bg:rgba(251,191,36,.06);
---blue:#60a5fa;
---txt:#e2e8f0;--txt2:#94a3b8;--txt3:#64748b;--txt4:#475569;
---mono:'JetBrains Mono',monospace;--sans:'Outfit',sans-serif;
---rl:14px;
+  --bg:#030711;--card:#0a1220;--card-h:#121f38;--border:#172240;--border-h:#1e3058;
+  --txt:#e2e8f0;--txt2:#94a3b8;--txt3:#64748b;
+  --band80:#184f95;--band50:#3987e5;--pos:#3987e5;--neg:#e66767;--line:#3987e5;
+  --good:#0ca30c;--warning:#fab219;--serious:#ec835a;--critical:#d03b3b;
+  --mono:'JetBrains Mono',ui-monospace,monospace;--sans:'Outfit',system-ui,sans-serif;--r:14px;
 }
-html{font-size:14.5px}
-body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased}
-::selection{background:var(--em);color:#000}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border-h);border-radius:3px}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 600px 400px at 15% 5%,rgba(52,211,153,.03),transparent);pointer-events:none}
-.W{max-width:1320px;margin:0 auto;padding:10px 14px 50px;position:relative;z-index:1}
-@media(min-width:768px){.W{padding:16px 24px 60px}}
-.btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;font-family:var(--sans);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-.btn:hover{background:var(--card-h);border-color:var(--border-h);color:var(--txt)}
-.btn-em{border-color:rgba(52,211,153,.2);color:var(--em);background:var(--em-bg)}
-.btn-em:hover{background:var(--em-bg2)}
-.btn-sm{padding:5px 10px;font-size:11px}
-.spin{animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--mono)}
-.badge-up{color:var(--em);background:var(--em-bg)}.badge-dn{color:var(--rose);background:var(--rose-bg)}
-
-/* Header */
-.hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.logo{display:flex;align-items:center;gap:9px}
-.logo-m{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--em),#059669);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#000;font-family:var(--mono)}
-.logo-t{font-weight:700;font-size:15px}.logo-t span{color:var(--em)}
-.logo-t small{font-size:10px;color:var(--txt4);font-weight:400}
-#st{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;margin-bottom:8px;display:none;align-items:center;gap:5px}
-#st.v{display:flex}
-
-/* Source badge */
-.src{font-size:9.5px;color:var(--txt4);background:var(--bg3);padding:2px 6px;border-radius:4px;font-family:var(--mono);display:inline-block;margin-bottom:6px}
-
-/* Banner */
-.hero{display:grid;gap:8px;margin-bottom:8px}
-@media(min-width:900px){.hero{grid-template-columns:1fr 1.3fr}}
-.hc{background:var(--card);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;position:relative;overflow:hidden}
-.tk-r{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.tk-p{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.7px}
-.tk-meta{display:flex;gap:6px;align-items:center;margin-top:2px;font-size:11px}
-.tk-stats{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--txt3)}
-.tk-stats b{color:var(--txt2);font-weight:500}
-.ldot{width:6px;height:6px;border-radius:50%;background:var(--em);display:inline-block;margin-right:3px;animation:pu 2s infinite}
-@keyframes pu{0%,100%{opacity:1}50%{opacity:.4}}
-
-/* Indicator grid */
-.ig{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-@media(max-width:768px){.ig{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:500px){.ig{grid-template-columns:repeat(2,1fr)}}
-.ii{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
-.ii-tf{font-size:9px;color:var(--txt4);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px}
-.ii-name{font-size:10.5px;color:var(--txt3);font-weight:600;margin:2px 0}
-.ii-val{font-size:14px;font-weight:700;font-family:var(--mono)}
-.ii-val.bull{color:var(--em)}.ii-val.bear{color:var(--rose)}.ii-val.neu{color:var(--amber)}
-.ii-bar{height:3px;border-radius:2px;background:var(--bg3);margin-top:4px;overflow:hidden}
-.ii-bf{height:100%;border-radius:2px}
-.ii-sub{font-size:9px;color:var(--txt4);font-family:var(--mono);margin-top:2px}
-
-/* Score */
-.score-big{text-align:center;padding:10px 0}
-.score-num{font-family:var(--mono);font-size:48px;font-weight:800}
-.score-lbl{font-size:12px;font-weight:700;letter-spacing:.3px;margin-top:2px}
-
-/* Table */
-.tw{border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;background:var(--card);margin-top:8px}
-.tsx{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
-thead{background:var(--bg3)}
-th{padding:8px 10px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--txt4);cursor:pointer;border-bottom:1px solid var(--border);white-space:nowrap}
-th:hover{color:var(--txt2)}
-td{padding:7px 10px;border-bottom:1px solid rgba(23,34,64,.35);white-space:nowrap;vertical-align:middle}
-tr{transition:background .08s;cursor:pointer}tr:hover{background:var(--card-h)}
-tr.sel{background:rgba(52,211,153,.05);border-left:2px solid var(--em)}
-.cc{display:flex;align-items:center;gap:8px}
-.cn{font-weight:600;font-size:12px}.cs{font-size:10px;color:var(--txt3);font-family:var(--mono)}
-.pc{font-family:var(--mono);font-weight:500}
-.chg{font-family:var(--mono);font-weight:600;font-size:11.5px}.chg.up{color:var(--em)}.chg.dn{color:var(--rose)}
-.scb{display:inline-flex;align-items:center;min-width:34px;padding:2px 7px;border-radius:5px;font-family:var(--mono);font-weight:700;font-size:12px}
-.scb-h{background:rgba(52,211,153,.12);color:var(--em);border:1px solid rgba(52,211,153,.2)}
-.scb-m{background:rgba(134,239,172,.07);color:#86efac;border:1px solid rgba(134,239,172,.12)}
-.scb-l{background:rgba(100,116,139,.07);color:var(--txt4);border:1px solid rgba(100,116,139,.1)}
-.scb-s{background:rgba(251,113,133,.1);color:var(--rose);border:1px solid rgba(251,113,133,.18)}
-.ind-mini{font-family:var(--mono);font-size:10px}
-.ind-mini.bull{color:var(--em)}.ind-mini.bear{color:var(--rose)}.ind-mini.neu{color:var(--txt3)}
-
-/* Loading */
-.tl{text-align:center;padding:40px 16px;color:var(--txt3);font-size:12px}
-.ld{display:inline-block;width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--em);border-radius:50%;animation:sp .7s linear infinite;margin-bottom:6px}
-.prog{max-width:300px;margin:10px auto 0;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
-.prog-fill{height:100%;background:var(--em);border-radius:2px;transition:width .3s}
-
-.ft{text-align:center;padding:18px 0 6px;font-size:10px;color:var(--txt4)}
-@keyframes fu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.fu{animation:fu .4s ease both}
-.d1{animation-delay:.04s}.d2{animation-delay:.08s}
-@media(max-width:640px){.tk-p{font-size:20px}.ig{grid-template-columns:1fr 1fr}}
-
-/* Zone cards */
-.zones{display:grid;gap:8px;margin-bottom:8px}
-@media(min-width:900px){.zones{grid-template-columns:1fr 1fr}}
-.zc{background:var(--card);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;position:relative;overflow:hidden}
-.zc.buy{border-color:rgba(52,211,153,.18)}.zc.buy::before{content:'';position:absolute;left:0;top:0;width:3px;height:100%;background:linear-gradient(var(--em),#059669);border-radius:3px 0 0 3px}
-.zc.sell{border-color:rgba(251,113,133,.15)}.zc.sell::before{content:'';position:absolute;right:0;top:0;width:3px;height:100%;background:linear-gradient(var(--rose),#e11d48);border-radius:0 3px 3px 0}
-.zc-tag{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
-.zc-tag::before{content:'';width:12px;height:2px;border-radius:1px}
-.buy .zc-tag{color:var(--em)}.buy .zc-tag::before{background:var(--em)}
-.sell .zc-tag{color:var(--rose)}.sell .zc-tag::before{background:var(--rose)}
-.zc-title{font-family:var(--mono);font-size:16px;font-weight:700;line-height:1.25;margin-bottom:2px}
-.zc-title .he{color:var(--em)}.zc-title .hr{color:var(--rose)}
-.zc-sub{font-size:11px;color:var(--txt3);margin-bottom:7px}
-.zc-ms{display:flex;gap:6px;flex-wrap:wrap}
-.hm{padding:4px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--mono)}
-.hm .hl{font-size:9.5px;color:var(--txt4);font-family:var(--sans);display:block;margin-bottom:1px}
-.rr-bar{height:7px;border-radius:4px;display:flex;overflow:hidden;margin:6px 0 3px;background:var(--bg3)}
-.rr-risk{background:linear-gradient(90deg,#9f1239,var(--rose));border-radius:4px 0 0 4px}
-.rr-rew{background:linear-gradient(90deg,var(--em),#059669)}
-.rr-labels{display:flex;justify-content:space-between;font-size:9.5px;font-family:var(--mono)}
-
-/* Panels row */
-.pnls{display:grid;gap:8px;margin-bottom:8px}
-@media(min-width:768px){.pnls{grid-template-columns:1fr 1fr 1fr}}
-.pn{background:var(--card);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
-.pn-t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--txt3);margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.sz-g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.sz-g label{font-size:10.5px;color:var(--txt3);display:block;margin-bottom:2px}
-.sz-g input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--txt);font-family:var(--mono);outline:none}
-.sz-g input:focus{border-color:var(--em)}
-.sz-res{margin-top:8px;padding:8px 10px;background:var(--em-bg);border:1px solid rgba(52,211,153,.15);border-radius:7px;font-family:var(--mono);font-size:12px;color:var(--em);font-weight:600;text-align:center}
-.so-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(23,34,64,.4);font-size:11.5px}.so-row:last-child{border:none}
-.so-pct{font-family:var(--mono);font-weight:700;min-width:32px;color:var(--em)}
-.so-tgt{font-family:var(--mono);color:var(--txt2);min-width:65px}
-.so-pl{font-family:var(--mono);font-weight:600;margin-left:auto;color:var(--em)}
-.so-total{margin-top:6px;padding:7px 10px;background:var(--em-bg);border:1px solid rgba(52,211,153,.12);border-radius:7px;font-size:11.5px;font-family:var(--mono);color:var(--em);font-weight:600;text-align:center}
-.ts-level{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--rose);margin:4px 0}
-.ts-note{font-size:10.5px;color:var(--txt3);margin-top:3px}
-.ts-lock{margin-top:6px;padding:5px 9px;background:var(--amber-bg);border:1px solid rgba(251,191,36,.12);border-radius:6px;font-size:10.5px;color:var(--amber)}
-
-/* Sortable headers */
-th{position:relative;user-select:none}
-th .sa{display:inline-block;margin-left:3px;opacity:.2;font-size:9px;transition:opacity .15s}
-th:hover .sa{opacity:.5}
-th.sorted .sa{opacity:1;color:var(--em)}
-
-/* Signal click hint */
-.sig-click{cursor:pointer;padding:3px 9px;border-radius:5px;transition:background .1s;display:inline-flex;align-items:center;gap:4px}
-.sig-click:hover{background:rgba(255,255,255,.04)}
-.sig-click::after{content:'›';font-size:14px;opacity:.3}
-
-/* Modal */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(5px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:12px;opacity:0;pointer-events:none;transition:opacity .18s}
-.mo.op{opacity:1;pointer-events:auto}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;padding:22px;transform:translateY(8px) scale(.97);transition:transform .2s cubic-bezier(.4,0,.2,1)}
-.mo.op .modal{transform:none}
-.mo-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.mo-coin{display:flex;align-items:center;gap:10px}
-.mo-coin .n{font-weight:700;font-size:17px}.mo-coin .s{font-size:11px;color:var(--txt3);font-family:var(--mono)}
-.mo-x{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--txt3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .1s}
-.mo-x:hover{border-color:var(--rose);color:var(--rose)}
-.mo-score{text-align:center;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:12px}
-.mo-score-n{font-family:var(--mono);font-size:42px;font-weight:800;line-height:1}
-.mo-score-l{font-size:12px;font-weight:700;margin-top:3px;letter-spacing:.3px}
-.mo-ig{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px}
-@media(max-width:640px){.mo-ig{grid-template-columns:repeat(2,1fr)}}
-.mo-ii{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:9px 11px}
-.mo-ii .tf{font-size:9px;color:var(--txt4);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px}
-.mo-ii .nm{font-size:10.5px;color:var(--txt3);font-weight:600;margin:1px 0}
-.mo-ii .vl{font-size:14px;font-weight:700;font-family:var(--mono)}
-.mo-ii .vl.bu{color:var(--em)}.mo-ii .vl.be{color:var(--rose)}.mo-ii .vl.ne{color:var(--amber)}
-.mo-ii .sb{font-size:9px;color:var(--txt4);font-family:var(--mono);margin-top:2px}
-.mo-ii .bar{height:3px;border-radius:2px;background:var(--bg3);margin-top:4px;overflow:hidden}
-.mo-ii .bfill{height:100%;border-radius:2px}
-.mo-why{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--txt2);line-height:1.55}
-.mo-why strong{color:var(--txt);display:block;margin-bottom:4px}
-.mo-why .reason{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;color:var(--txt3)}
-.mo-ft{display:flex;gap:6px;flex-wrap:wrap}
-.btv{background:linear-gradient(135deg,#2962ff,#1e88e5);color:#fff;border:none;padding:8px 14px;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;gap:5px;text-decoration:none}
-.btv:hover{opacity:.85}
-
-/* Trade status banner */
-.ts-banner{padding:12px 18px;border-radius:10px;font-family:var(--mono);font-size:15px;font-weight:700;text-align:center;margin:6px 0 8px;letter-spacing:.3px;transition:all .3s}
-.ts-banner.buy{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--em)}
-.ts-banner.sell{background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.3);color:var(--rose)}
-.ts-banner.wait{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:var(--amber)}
-.next-act{font-size:12px;color:var(--txt2);margin-top:6px;padding:6px 10px;background:var(--bg2);border-radius:6px;font-family:var(--mono)}
-
-/* Collapsible indicator grid */
-.ig-wrap{position:relative}
-.ig-tog{font-size:10.5px;color:var(--txt3);cursor:pointer;display:flex;align-items:center;gap:4px;margin-bottom:4px;user-select:none;transition:color .12s}
-.ig-tog:hover{color:var(--txt)}
-.ig-tog .iga{transition:transform .2s;display:inline-block}
-.ig-wrap.open .ig-tog .iga{transform:rotate(90deg)}
-.ig-wrap .ig{max-height:0;overflow:hidden;transition:max-height .3s ease,opacity .3s;opacity:0}
-.ig-wrap.open .ig{max-height:800px;opacity:1}
-
-/* Conviction badge */
-.conv{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap}
-.conv-hi{color:var(--em);background:var(--em-bg)}
-.conv-md{color:var(--amber);background:var(--amber-bg)}
-.conv-lo{color:var(--txt4);background:rgba(100,116,139,.08)}
-
-/* Signal Card — MetaSignals style */
-.sig-card{border-radius:20px;padding:20px 24px;margin-bottom:10px;transition:all .3s;display:none}
-.sig-card.active{display:block}
-.sig-card.long{background:rgba(6,78,59,.85);border:1px solid var(--em)}
-.sig-card.exit{background:rgba(6,78,59,.7);border:1px solid var(--amber)}
-.sig-card.neutral{background:var(--card);border:1px solid var(--border)}
-.sig-type{font-size:13px;letter-spacing:3px;font-weight:700;text-align:center;margin-bottom:2px}
-.sig-sub{font-size:11.5px;text-align:center;margin-bottom:10px;font-weight:500}
-.sig-card.long .sig-type{color:var(--em2)}
-.sig-card.long .sig-sub{color:var(--em)}
-.sig-card.exit .sig-type{color:var(--amber)}
-.sig-card.exit .sig-sub{color:var(--em2)}
-.sig-card.neutral .sig-type{color:var(--txt3)}
-.sig-card.neutral .sig-sub{color:var(--txt4)}
-.sig-pair{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px}
-.sig-pair .coin-box{background:rgba(255,255,255,.08);border-radius:14px;padding:6px 14px;display:flex;align-items:center;gap:8px}
-.sig-pair .coin-box .sym{font-size:20px;font-weight:700}
-.sig-pair .slash{font-size:26px;font-weight:300;opacity:.4}
-.sig-pair .quote-box{background:rgba(255,255,255,.08);border-radius:14px;padding:6px 14px;font-size:17px;font-weight:700}
-.sig-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12px;margin-bottom:14px}
-.sig-meta .lbl{color:var(--em2);font-weight:600;font-size:10.5px;letter-spacing:.5px}
-.sig-card.exit .sig-meta .lbl{color:var(--amber)}
-.sig-meta .val{font-family:var(--mono);font-weight:500}
-.sig-divider{border-top:1px solid rgba(255,255,255,.1);margin:12px 0}
-.sig-targets{display:flex;flex-direction:column;gap:8px}
-.sig-tp{display:flex;justify-content:space-between;align-items:baseline;font-size:13px}
-.sig-tp .tp-label{font-weight:600;min-width:70px}
-.sig-tp .tp-price{font-family:var(--mono);font-weight:500}
-.sig-tp .tp-rr{font-family:var(--mono);font-weight:600;margin-left:12px}
-.sig-card.long .sig-tp .tp-rr{color:var(--em2)}
-.sig-card.exit .sig-tp .tp-rr{color:var(--amber)}
-.sig-stats{width:100%;font-size:11px;border-collapse:collapse;margin-top:4px}
-.sig-stats th{text-align:left;padding:4px 0;font-weight:600;font-size:10px;letter-spacing:.4px}
-.sig-card.long .sig-stats th{color:var(--em2)}
-.sig-card.exit .sig-stats th{color:var(--amber)}
-.sig-stats td{padding:3px 0;font-family:var(--mono);font-size:11.5px}
-.sig-stats td:nth-child(2),.sig-stats td:nth-child(3),.sig-stats td:nth-child(4){text-align:center}
-.sig-stats td:last-child{text-align:right}
-
-/* Mode toggle */
-.mode-toggle{display:inline-flex;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
-.mode-btn{padding:6px 12px;border-radius:6px;border:none;background:transparent;color:var(--txt3);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--sans);letter-spacing:.3px}
-.mode-btn:hover{color:var(--txt2)}
-.mode-btn.active{background:var(--em-bg2);color:var(--em)}
-.mode-btn.scalp.active{background:rgba(96,165,250,.15);color:var(--blue)}
-.mode-label{font-size:9px;color:var(--txt4);letter-spacing:.5px;margin-left:4px}
+*{box-sizing:border-box;margin:0}
+html{font-size:15px}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.45}
+a{color:var(--band50);text-decoration:none}a:hover{text-decoration:underline}
+.W{max-width:1180px;margin:0 auto;padding:12px 16px 64px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:6px 0 14px}
+.logo{font-weight:700;font-size:20px;letter-spacing:-.01em}.logo span{color:var(--band50)}.logo small{font-family:var(--mono);font-size:11px;color:var(--txt3);font-weight:500;margin-left:6px}
+.sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--txt2);background:var(--card);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--txt3);flex:none}
+.st-good .dot{background:var(--good)}.st-warning .dot{background:var(--warning)}.st-critical .dot{background:var(--critical)}.st-serious .dot{background:var(--serious)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:12px}
+h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.note{font-size:12.5px;color:var(--txt2)}.muted{color:var(--txt3)}.mono{font-family:var(--mono)}
+.alert{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;border:1px solid var(--border);display:flex;gap:8px;align-items:flex-start}
+.alert b{font-weight:600}.alert.critical{border-color:var(--critical)}.alert.warning{border-color:var(--warning)}
+.grid{display:grid;gap:14px}@media(min-width:860px){.g2{grid-template-columns:1.1fr .9fr}.g3{grid-template-columns:repeat(3,1fr)}}
+.hero{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.hero .big{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1}.hero .lbl{font-size:15px;color:var(--txt2)}
+.facts{display:grid;gap:6px;margin:10px 0 4px}.fact{display:flex;gap:8px;align-items:center;font-size:13.5px}
+.ic{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;color:#04070f}
+.ic.y{background:var(--good)}.ic.n{background:var(--critical);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:500;color:var(--txt3);text-align:right;padding:6px 8px;font-size:11.5px;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{padding:7px 8px;text-align:right;border-bottom:1px solid rgba(23,34,64,.6);font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}.tl{text-align:left}
+tbody tr.click{cursor:pointer}tbody tr.click:hover{background:var(--card-h)}tr.sel{background:var(--card-h)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tag{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;border:1px solid var(--border-h);color:var(--txt2);margin-left:4px}
+.q{display:inline-flex;gap:2px;vertical-align:middle}.q i{width:5px;height:12px;border-radius:2px;background:var(--border-h)}.q i.on{background:var(--band50)}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+button,select,input{font-family:var(--sans);font-size:13px;color:var(--txt);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+button{cursor:pointer;color:var(--txt2)}button:hover{border-color:var(--border-h);color:var(--txt)}button.on{border-color:var(--band50);color:var(--txt)}
+input[type=number]{width:110px;font-family:var(--mono)}label{font-size:12px;color:var(--txt3);display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:8px}
+.tile{border:1px solid var(--border);border-radius:10px;padding:10px 12px}.tile .v{font-size:22px;font-weight:600;letter-spacing:-.01em}.tile .l{font-size:12px;color:var(--txt3)}.tile .s{font-size:11.5px;color:var(--txt2);margin-top:2px}
+.meter{position:relative;height:6px;border-radius:4px;background:var(--border);margin-top:8px}.meter b{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--band50)}.meter u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--txt)}
+svg{display:block;width:100%;overflow:visible}svg text{font-family:var(--mono);font-size:10.5px;fill:var(--txt2)}
+.coin{border:1px solid var(--border);border-radius:12px;padding:12px}.coin .p{font-size:22px;font-weight:600}.coin .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.rb-l{font-size:11.5px;color:var(--txt3);margin:8px 0 2px;display:flex;justify-content:space-between}
+.tip{position:fixed;z-index:9;pointer-events:none;background:#0d1830;border:1px solid var(--border-h);border-radius:8px;padding:8px 10px;font-size:12px;max-width:260px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.tip b{font-weight:600;display:block;margin-bottom:2px}.tip div{display:flex;justify-content:space-between;gap:14px}.tip div span:last-child{font-family:var(--mono)}
+pre{white-space:pre-wrap;font-family:var(--mono);font-size:11.5px;color:var(--txt2);border-top:1px solid var(--border);padding-top:8px;margin-top:8px}
+details summary{cursor:pointer;color:var(--txt2);font-size:13px}
+footer{color:var(--txt3);font-size:12px;margin-top:22px}
 </style>
 </head>
 <body>
 <div class="W">
-
-<div class="hdr fu">
-  <div class="logo">
-    <div class="logo-m">PT</div>
-    <div class="logo-t">Precision<span>Timer</span> <small>v9.3 · quant</small></div>
+  <header>
+    <div class="logo">Precision<span>Timer</span><small>v11 · measured</small></div>
+    <span class="sp"></span>
+    <span class="chip" id="age"><span class="dot"></span><span>loading…</span></span>
+    <a class="chip" href="classic.html">Classic dashboard</a>
+  </header>
+  <div id="banners"></div>
+  <div class="grid g2">
+    <section class="card" id="market"><h2>Market</h2><p class="note">Loading…</p></section>
+    <section class="card" id="mine"><h2>Your coins</h2><p class="note">Loading…</p></section>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="modeSwingBtn" onclick="setMode('swing')">SWING <span class="mode-label">1H/4H/12H/1D</span></button>
-      <button class="mode-btn scalp" id="modeScalpBtn" onclick="setMode('scalp')">SCALP <span class="mode-label">15m/30m/1H/2H</span></button>
-    </div>
-    <button class="btn btn-sm" id="rBtn" onclick="refreshAll()"><svg id="rIco" style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>Refresh</button>
-    <button class="btn btn-sm" id="logBtn" onclick="openLogMo()">📋 Log <span id="logCount" style="font-family:var(--mono);font-size:10px;color:var(--txt3)">0</span></button>
-    <button class="btn btn-sm" id="expBtn" onclick="openExpectancyMo()">📈 Expectancy</button>
-    <a class="btn btn-em btn-sm" href="https://www.tradingview.com/symbols/BINANCE-ETHUSDT/" target="_blank">TradingView ↗</a>
+  <section class="card" id="detail"><h2>Coin detail</h2></section>
+  <section class="card" id="board"><h2>Board</h2></section>
+  <div class="grid g2">
+    <section class="card" id="events"><h2>Events</h2></section>
+    <section class="card" id="score"><h2>Scorecard</h2></section>
   </div>
+  <footer id="foot"></footer>
 </div>
+<div class="tip" id="tip" hidden></div>
 
-<div id="st"></div>
+<script type="module">
+// The page does no market maths of its own: probabilities come from engine/forecast.js (the same
+// file the backtest and the scan run) reading model/model.js (measurements), under pt.config.js (policy).
+import config from './pt.config.js';
+import model from './model/model.js';
+import { bands, touchProb, planOdds, isExtrapolated, HORIZONS } from './engine/forecast.js';
 
-<!-- Banner -->
-<div class="hero">
-  <div class="hc fu" id="bannerLeft">
-    <div class="src">BINANCE SPOT · LIVE</div>
-    <div class="tk-r">
-      <div><div class="tk-p" id="hP">Loading…</div>
-        <div class="tk-meta"><span class="badge" id="hCh">—</span><span id="hName" style="font-size:11px;color:var(--txt3)"></span></div>
-      </div>
-    </div>
-    <!-- Next Action line -->
-    <div class="next-act" id="hNextAct">Analyzing…</div>
-    <div id="fundNote" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:4px;padding:0 10px">Positioning: —</div>
-    <div id="flowNote" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:2px;padding:0 10px">ETF flows: loading…</div>
-    <!-- Trade Status Banner -->
-    <div class="ts-banner wait" id="hTradeBanner">LOADING SIGNALS…</div>
-    <div class="tk-stats">
-      <span>1H Stoch: <b id="hStoch1">—</b></span>
-      <span>4H RSI: <b id="hRsi4">—</b></span>
-      <span>12H Stoch: <b id="hStoch12">—</b></span>
-      <span>1D RSI: <b id="hRsi1d">—</b></span>
-      <span><span class="ldot"></span><b id="hTime">—</b></span>
-    </div>
-    <div class="score-big">
-      <div class="score-num" id="hScore">—</div>
-      <div class="score-lbl" id="hSigLbl">Loading indicators…</div>
-    </div>
-  </div>
-  <div class="hc fu d1" id="bannerRight">
-    <div class="ig-wrap" id="igWrap">
-      <div class="src" id="indSrc">1H + 4H + 12H + 1D CANDLES · COMPUTING…</div>
-      <div class="ig-tog" onclick="document.getElementById('igWrap').classList.toggle('open')"><span class="iga">▶</span> Click to expand full indicator breakdown</div>
-      <div class="ig" id="indGrid">
-        <div class="ii"><div class="ii-tf">1H</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">1H</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">4H</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">4H</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">12H</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">12H</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">1D</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-        <div class="ii"><div class="ii-tf">1D</div><div class="ii-name">Loading…</div><div class="ii-val neu">—</div></div>
-      </div>
-    </div>
-  </div>
-</div>
+const $ = id => document.getElementById(id);
+const h = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v === null || v === undefined || v === false) continue; if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v); } for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+const NS = 'http://www.w3.org/2000/svg';
+const s = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) e.setAttribute(k, v); for (const c of kids.flat()) if (c) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+const fp = p => { if (p === null || p === undefined || Number.isNaN(p)) return '—'; const a = Math.abs(p); return a >= 1000 ? p.toLocaleString('en-US', { maximumFractionDigits: 0 }) : a >= 100 ? p.toFixed(1) : a >= 1 ? p.toFixed(2) : a >= 0.01 ? p.toFixed(4) : p.toPrecision(3); };
+const pc = (x, d = 0) => (x === null || x === undefined ? '—' : (x * 100).toFixed(d) + '%');
+const sg = (x, d = 1) => (x === null || x === undefined ? '—' : (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d) + '%');
+const ago = t => { const m = Math.max(0, (Date.now() - Date.parse(t)) / 60e3); return m < 90 ? Math.round(m) + ' min ago' : m < 2880 ? (m / 60).toFixed(1) + ' h ago' : (m / 1440).toFixed(1) + ' days ago'; };
+const tip = $('tip');
+function showTip(ev, title, rows) { tip.replaceChildren(h('b', {}, title), ...rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', {}, b)))); tip.hidden = false; const x = Math.min(window.innerWidth - tip.offsetWidth - 8, ev.clientX + 14), y = Math.min(window.innerHeight - tip.offsetHeight - 8, ev.clientY + 14); tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px'; }
+const hideTip = () => { tip.hidden = true; };
+const hover = (el, title, rows) => { el.addEventListener('pointermove', e => showTip(e, typeof title === 'function' ? title() : title, typeof rows === 'function' ? rows() : rows)); el.addEventListener('pointerleave', hideTip); return el; };
 
-<!-- Buy/Sell Zone Cards -->
-<div class="zones">
-  <div class="zc buy fu d1" id="zBuy">
-    <div class="zc-tag">Local bottom — buy zone</div>
-    <div class="zc-title" id="zBuyTitle">—</div>
-    <div class="zc-sub" id="zBuySub">Loading…</div>
-    <div class="zc-ms">
-      <div class="hm"><span class="hl">Distance</span><span id="zBuyDist">—</span></div>
-      <div class="hm"><span class="hl" id="zBuyStatLbl">4H Status</span><span id="zBuy4h">—</span></div>
-      <div class="hm"><span class="hl">Stop</span><span id="zBuyStop" style="color:var(--rose)">—</span></div>
-    </div>
-    <div class="rr-bar"><div class="rr-risk" id="rrRisk" style="width:20%"></div><div class="rr-rew" id="rrRew" style="width:80%"></div></div>
-    <div class="rr-labels"><span style="color:var(--rose)" id="rrRiskL">—</span><span style="color:var(--em)" id="rrRewL">—</span></div>
-  </div>
-  <div class="zc sell fu d1" id="zSell">
-    <div class="zc-tag">Expected local top — sell zone</div>
-    <div class="zc-title" id="zSellTitle">—</div>
-    <div class="zc-sub" id="zSellSub">Loading…</div>
-    <div class="zc-ms">
-      <div class="hm"><span class="hl">Distance</span><span id="zSellDist">—</span></div>
-      <div class="hm"><span class="hl">Signal</span><span id="zSellSig">—</span></div>
-      <div class="hm"><span class="hl">R:R to TP1</span><span id="zSellRR" style="color:var(--em)">—</span></div>
-    </div>
-  </div>
-</div>
+let board = null, card = null, alerts = null, scanState = null, source = '', selected = null, filter = 'all';
+const all = () => [...board.rows, ...(board.extra || [])];
+const rowOf = sym => all().find(r => r.sym === sym);
 
-<!-- Signal Card (MetaSignals style) -->
-<div class="sig-card neutral" id="sigCard">
-  <div class="sig-type" id="sigCardType">ANALYZING…</div>
-  <div class="sig-sub" id="sigCardSub"></div>
-  <div class="sig-pair">
-    <div class="coin-box"><span class="sym" id="sigSym">ETH</span></div>
-    <span class="slash">/</span>
-    <div class="quote-box">USD</div>
-  </div>
-  <div class="sig-meta">
-    <div><span class="lbl">TIMEFRAME:</span> <span class="val" id="sigTF">12H</span></div>
-    <div><span class="lbl">PRICE:</span> <span class="val" id="sigPrice">—</span></div>
-    <div><span class="lbl">SL CLOSE BELOW:</span> <span class="val" id="sigSL">—</span></div>
-    <div><span class="lbl">SCORE:</span> <span class="val" id="sigScoreVal">—</span></div>
-  </div>
-  <div class="sig-divider"></div>
-  <div class="sig-targets" id="sigTargets">—</div>
-  <div class="sig-divider"></div>
-  <table class="sig-stats">
-    <thead><tr><th>TP</th><th style="text-align:center">EST %*</th><th style="text-align:center">R:R</th><th style="text-align:center">RISK</th><th style="text-align:right">TARGET</th></tr></thead>
-    <tbody id="sigStatsBody">—</tbody>
-  </table>
-  <div style="font-size:9px;color:var(--txt4);margin-top:4px;font-family:var(--mono)">*Synthetic estimates, not backtested — live signal log is accumulating real hit rates to replace these.</div>
-</div>
-
-<!-- Trade Panels -->
-<div class="pnls">
-  <div class="pn fu d2">
-    <div class="pn-t">Position sizer</div>
-    <div class="sz-g">
-      <div><label>Account ($)</label><input type="number" id="szA" value="10000" oninput="updatePanels()"></div>
-      <div><label>Risk %</label><input type="number" id="szR" value="2" step="0.5" oninput="updatePanels()"></div>
-      <div><label>Entry</label><input type="number" id="szE" value="2050" oninput="updatePanels()"></div>
-      <div><label>Stop</label><input type="number" id="szS" value="1930" oninput="updatePanels()"></div>
-    </div>
-    <div class="sz-res" id="szRes">—</div>
-    <div id="szVol" style="font-size:10px;font-family:var(--mono);color:var(--txt4);margin-top:5px">Vol regime: —</div>
-  </div>
-  <div class="pn fu d2">
-    <div class="pn-t">Tiered scale-out plan</div>
-    <div id="soBody">—</div>
-    <div class="so-total" id="soTotal">—</div>
-  </div>
-  <div class="pn fu d2">
-    <div class="pn-t" style="color:var(--rose)" id="tsPanelTitle">Trailing stop</div>
-    <div class="ts-level" id="tsLvl">—</div>
-    <div class="ts-note" id="tsDesc">—</div>
-    <div class="ts-lock" id="tsLock">—</div>
-  </div>
-</div>
-
-<!-- Table -->
-<div class="tw fu d2">
-  <div class="tsx">
-    <table><thead><tr>
-      <th data-col="name" onclick="doSort('name')">Coin <span class="sa">▲</span></th>
-      <th data-col="price" onclick="doSort('price')">Price <span class="sa">▲</span></th>
-      <th data-col="ch" onclick="doSort('ch')">24h <span class="sa">▲</span></th>
-      <th data-col="stoch1" onclick="doSort('stoch1')">1H Stoch <span class="sa">▲</span></th>
-      <th data-col="rsi4" onclick="doSort('rsi4')">4H RSI <span class="sa">▲</span></th>
-      <th data-col="stoch4" onclick="doSort('stoch4')">4H Stoch <span class="sa">▲</span></th>
-      <th data-col="stoch12" onclick="doSort('stoch12')">12H Stoch <span class="sa">▲</span></th>
-      <th data-col="rsi1d" onclick="doSort('rsi1d')">1D RSI <span class="sa">▲</span></th>
-      <th data-col="rs" onclick="doSort('rs')">RS vs BTC <span class="sa">▲</span></th>
-      <th data-col="score" class="sorted" onclick="doSort('score')">Score <span class="sa">▼</span></th>
-      <th>Signal</th>
-      <th>Conviction</th>
-    </tr></thead>
-    <tbody id="tb">
-      <tr><td colspan="12"><div class="tl"><div class="ld"></div><br>Fetching 1H + 4H + 12H + 1D candles from Binance…<div class="prog"><div class="prog-fill" id="progBar" style="width:0%"></div></div><div id="progTxt" style="margin-top:4px;font-size:10px;color:var(--txt4)">0 / 15 coins</div></div></td></tr>
-    </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Signal Breakdown Modal -->
-<div class="mo" id="moOverlay" onclick="if(event.target===this)closeMo()">
-  <div class="modal" id="moContent"></div>
-</div>
-
-<div class="ft">
-  All indicators computed from <b>real Binance OHLCV candles</b> — RSI(14), Stoch RSI(3,3,14,14), MACD(12,26,9), SQZMOM(20) calculated in-browser<br>
-  No simulated values · ATR(14)-anchored zones &amp; structure pivots · Timeframes: 1H + 4H + 12H + 1D · 4 calls per coin · Data refreshes every 60s · Not financial advice
-</div>
-
-</div>
-<script>
-/* ===== CONFIG ===== */
-const COINS=[
-  {sym:'ETHUSDT',name:'Ethereum',short:'ETH'},
-  {sym:'BTCUSDT',name:'Bitcoin',short:'BTC'},
-  {sym:'SOLUSDT',name:'Solana',short:'SOL'},
-  {sym:'BNBUSDT',name:'BNB',short:'BNB'},
-  {sym:'XRPUSDT',name:'XRP',short:'XRP'},
-  {sym:'DOGEUSDT',name:'Dogecoin',short:'DOGE'},
-  {sym:'ADAUSDT',name:'Cardano',short:'ADA'},
-  {sym:'AVAXUSDT',name:'Avalanche',short:'AVAX'},
-  {sym:'LINKUSDT',name:'Chainlink',short:'LINK'},
-  {sym:'DOTUSDT',name:'Polkadot',short:'DOT'},
-  {sym:'SUIUSDT',name:'Sui',short:'SUI'},
-  {sym:'NEARUSDT',name:'NEAR',short:'NEAR'},
-  {sym:'AAVEUSDT',name:'Aave',short:'AAVE'},
-  {sym:'LTCUSDT',name:'Litecoin',short:'LTC'},
-  {sym:'UNIUSDT',name:'Uniswap',short:'UNI'},
-];
-// Endpoints: try proxy first (same-origin, no CORS issues on Vercel deploy),
-// fall back to direct Binance endpoints if running locally or proxy is down
-const ENDPOINTS=[
-  '/api/klines',  // Vercel serverless proxy — same origin, no CORS issue
-  'https://data-api.binance.vision/api/v3/klines',
-  'https://api.binance.us/api/v3/klines',
-  'https://api1.binance.com/api/v3/klines',
-  'https://api3.binance.com/api/v3/klines',
-];
-let allData={},selSym='ETHUSDT';
-let mode='swing'; // 'swing' or 'scalp'
-const MODE_CONFIG={
-  swing:{tfs:['1h','4h','12h','1d'],labels:['1H','4H','12H','1D'],limits:[100,100,80,60],refresh:60000,
-    targetPcts:[1.15,1.28,1.45],stopPct:0.91,sellPct:1.08,buyLoPct:0.97,buyHiPct:0.99},
-  scalp:{tfs:['15m','30m','1h','2h'],labels:['15M','30M','1H','2H'],limits:[100,100,100,80],refresh:30000,
-    targetPcts:[1.015,1.025,1.04],stopPct:0.985,sellPct:1.02,buyLoPct:0.985,buyHiPct:0.997}
-};
-
-/* ===== v8e PARAMS — single home for every tunable number (policy, not mechanism).
-   Change values here; never hardcode them downstream. ===== */
-const V8E_PARAMS={
-  atrPeriod:14,
-  // Zone geometry, per mode. R = stopATR x ATR (risk unit); TPs laddered in R-multiples.
-  swing:{stopATR:1.2, buyLoATR:0.5, buyHiATR:0.25, tpR:[1.0,2.0,3.0], sellLoATR:0.25, sellHiATR:0.75},
-  scalp:{stopATR:1.0, buyLoATR:0.35, buyHiATR:0.15, tpR:[1.0,1.8,2.8], sellLoATR:0.2, sellHiATR:0.5},
-  pivotLR:3,               // bars each side to confirm a swing pivot
-  volHighPct:75, volLowPct:25, volHighSizeMult:0.5, // vol-regime sizing overlay
-  rsBars:24,               // relative-strength lookback (primary-TF bars)
-  volTrendDemote:0.85,     // BULL demoted to RANGE below this volume ratio (v8d spec)
-  fundingCrowded:0.0005,   // |0.05%| per 8h funding threshold
-  oiCrowdedPct:15,         // OI % change over ~24h to flag crowding
-  structBonus:5,           // confluence bonus for entry at structure (never in BEAR)
-  structProxATR:0.5,       // "at structure" = within this many ATR of pivot low
-  logMax:2000, logKey:'ptSignalLog_v1',
-  /* ---- v9 FLOW MODULE (spot-ETF net flows, $M — the orthogonal non-price input) ---- */
-  flow:{
-    refreshMs:1800000,                       // 30 min — flows update once per trading day
-    scale:{ETH:{strong:250,weak:50},         // |5d sum| thresholds per coin, $M
-           BTC:{strong:1000,weak:200}},
-    posDayRatio:0.6,                         // ≥60% of last 5 days positive = consistent
-    strongOutCap:50,                         // STRONG_OUT gates score like a veto notch
-    maxAgeDays:4                             // newest row older than this = STALE, treat as down
-  },
-  /* ---- v9 POSITIONING MODULE (funding trend + OI slope, replaces snapshot check) ---- */
-  positioning:{
-    fundingBars:9,                           // 9 x 8h settlements = 3d funding trend
-    oiDays:8,                                // 8 daily OI points → 7d slope
-    fundingHot:0.0003,                       // 3d MEAN |funding| per 8h — trend, not snapshot
-    oiSlopeHot:10,                           // OI % change over 7d to confirm crowding
-    oiSlopeDelev:-6,                         // OI % change over 7d that reads as deleveraged
-    crowdedLongCap:55                        // chase-guard cap outside BEAR (BEAR caps are lower anyway)
-  },
-  /* ---- v9 EXPECTANCY ENGINE (reads the signal log; no new API calls) ---- */
-  expectancy:{minEpisodes:5, minContribN:20} // below these: show "collecting", never fake numbers
-};
-
-/* ===== REAL TA MATH ===== */
-function calcRSI(closes,period=14){
-  if(closes.length<period+1)return null;
-  let gains=0,losses=0;
-  for(let i=1;i<=period;i++){
-    const d=closes[i]-closes[i-1];
-    if(d>0)gains+=d;else losses-=d;
-  }
-  let avgG=gains/period,avgL=losses/period;
-  for(let i=period+1;i<closes.length;i++){
-    const d=closes[i]-closes[i-1];
-    avgG=(avgG*(period-1)+(d>0?d:0))/period;
-    avgL=(avgL*(period-1)+(d<0?-d:0))/period;
-  }
-  if(avgL===0)return 100;
-  const rs=avgG/avgL;
-  return Math.round((100-100/(1+rs))*100)/100;
+/* ───────── data ───────── */
+async function getJson(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(url.split('?')[0].split('/').pop() + ' → HTTP ' + r.status); return r.json(); }
+async function load() {
+  const local = new URLSearchParams(location.search).get('data');          // ?data=data → read a local scan output folder
+  const base = local ? local.replace(/\/$/, '') : `https://raw.githubusercontent.com/${config.repo}/${config.dataBranch}`;
+  const bust = '?t=' + Math.floor(Date.now() / 300e3);
+  let scan = null, live = null, errs = [];
+  try { scan = await getJson(`${base}/board.json${bust}`); } catch (e) { errs.push(e.message); }
+  const stale = !scan || Date.now() - Date.parse(scan.generatedAt) > 3 * 3600e3;
+  if (stale && !local) { try { live = await getJson('/api/board'); } catch (e) { errs.push(e.message); } }
+  board = live && (!scan || Date.parse(live.generatedAt) > Date.parse(scan.generatedAt)) ? live : scan;
+  source = board === live ? 'computed on demand' : 'hourly scan';
+  try { card = await getJson(`${base}/scorecard.json${bust}`); } catch { card = null; }
+  try { alerts = await getJson(`${base}/alerts.json${bust}`); } catch { alerts = null; }
+  try { scanState = await getJson(`${base}/state.json${bust}`); } catch { scanState = null; }
+  if (!board) { $('banners').replaceChildren(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'No data. '), `Neither the scan output nor the on-demand endpoint answered (${errs.join('; ')}). Check GitHub → Actions → "PrecisionTimer scan", and that /api/board is deployed.`))); $('age').lastChild.textContent = 'no data'; $('age').className = 'chip st-critical'; return; }
+  selected = selected || (board.holdings[0] && rowOf(board.holdings[0]) ? board.holdings[0] : 'ETH');
+  render(scan && live && board === live);
 }
 
-function calcStochRSI(closes,rsiPeriod=14,stochPeriod=14,kSmooth=3,dSmooth=3){
-  if(closes.length<rsiPeriod+stochPeriod+kSmooth+dSmooth)return null;
-  // Build RSI series incrementally (not O(n²))
-  const rsis=[];
-  let avgG=0,avgL=0;
-  for(let i=1;i<=rsiPeriod;i++){
-    const d=closes[i]-closes[i-1];
-    if(d>0)avgG+=d;else avgL-=d;
-  }
-  avgG/=rsiPeriod;avgL/=rsiPeriod;
-  rsis.push(avgL===0?100:100-100/(1+avgG/avgL));
-  for(let i=rsiPeriod+1;i<closes.length;i++){
-    const d=closes[i]-closes[i-1];
-    avgG=(avgG*(rsiPeriod-1)+(d>0?d:0))/rsiPeriod;
-    avgL=(avgL*(rsiPeriod-1)+(d<0?-d:0))/rsiPeriod;
-    rsis.push(avgL===0?100:100-100/(1+avgG/avgL));
-  }
-  if(rsis.length<stochPeriod)return null;
-  // Stoch of RSI
-  const rawK=[];
-  for(let i=stochPeriod-1;i<rsis.length;i++){
-    const window=rsis.slice(i-stochPeriod+1,i+1);
-    const hi=Math.max(...window),lo=Math.min(...window);
-    rawK.push(hi===lo?50:(rsis[i]-lo)/(hi-lo)*100);
-  }
-  const kLine=sma(rawK,kSmooth);
-  const dLine=sma(kLine,dSmooth);
-  if(!kLine.length||!dLine.length)return null;
-  return{k:Math.round(kLine[kLine.length-1]*100)/100,d:Math.round(dLine[dLine.length-1]*100)/100};
+/* ───────── header + banners ───────── */
+function renderHead(scanStale) {
+  const ageMin = (Date.now() - Date.parse(board.generatedAt)) / 60e3, closeAgeH = (Date.now() - Date.parse(board.asOfCloseTime)) / 3600e3;
+  const st = closeAgeH > 36 ? 'critical' : ageMin > 180 ? 'warning' : 'good';
+  $('age').className = 'chip st-' + st; $('age').lastChild.textContent = `${st === 'good' ? 'Current' : st === 'warning' ? 'Aging' : 'STALE'} · close of ${board.asOf} · prices ${ago(board.generatedAt)} · ${source}`;
+  const B = [];
+  if (st === 'critical') B.push(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'Stale. '), `The newest daily close on this page is ${board.asOf}. Nothing below reflects the market since then.`)));
+  if (scanStale || (!card && source !== 'hourly scan')) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'The hourly scan is not running. '), 'This board was computed on demand, so it is current — but nothing is being logged, scored or alerted. Fix: GitHub → Actions → "PrecisionTimer scan" (README, step 2).')));
+  if (scanState && scanState.lastError) B.push(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'The last scan failed. '), `${scanState.lastError.at.slice(0, 16).replace('T', ' ')} UTC — ${scanState.lastError.message}. Nothing is being logged or alerted until it is fixed (GitHub → Actions → "PrecisionTimer scan").`)));
+  if (board.configDrift) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'Settings changed since the model was measured. '), 'The statistics shown describe the previous rules. Run the "PrecisionTimer calibrate" workflow.')));
+  if ((Date.now() - Date.parse(model.fittedThrough)) / 864e5 > 60) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'Model is ' + Math.round((Date.now() - Date.parse(model.fittedThrough)) / 864e5) + ' days old. '), 'Re-measure with the "PrecisionTimer calibrate" workflow.')));
+  if (board.noData && board.noData.length) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'No candles for: '), board.noData.join(', ') + ' — check the tickers in pt.config.js.')));
+  $('banners').replaceChildren(...B);
 }
 
-function sma(arr,period){
-  if(arr.length<period)return[];
-  const result=[];
-  for(let i=period-1;i<arr.length;i++){
-    let sum=0;for(let j=i-period+1;j<=i;j++)sum+=arr[j];
-    result.push(sum/period);
-  }
-  return result;
+/* ───────── market ───────── */
+function breadthChart(hist) {
+  const W = 520, H = 96, L = 4, R = 44, T = 8, B = 16, n = hist.length, x = i => L + (W - L - R) * i / Math.max(1, n - 1), y = v => T + (H - T - B) * (1 - v);
+  const pts = hist.map((d, i) => `${x(i).toFixed(1)},${y(d.breadth50 ?? 0).toFixed(1)}`).join(' ');
+  const cur = s('g', { style: 'display:none' }, s('line', { y1: T, y2: H - B, stroke: 'var(--txt3)', 'stroke-width': 1 }), s('circle', { r: 4, fill: 'var(--line)', stroke: 'var(--card)', 'stroke-width': 2 }));
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Share of the universe above its 50-day average, last ' + n + ' days' },
+    s('line', { x1: L, x2: W - R, y1: y(0.5), y2: y(0.5), stroke: 'var(--border-h)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
+    s('text', { x: W - R + 6, y: y(0.5) + 3.5 }, '50%'),
+    s('polyline', { points: pts, fill: 'none', stroke: 'var(--line)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
+    s('circle', { cx: x(n - 1), cy: y(hist[n - 1].breadth50 ?? 0), r: 4, fill: 'var(--line)', stroke: 'var(--card)', 'stroke-width': 2 }),
+    s('text', { x: L, y: H - 3 }, hist[0].day.slice(5)), s('text', { x: W - R, y: H - 3, 'text-anchor': 'end' }, hist[n - 1].day.slice(5)), cur);
+  svg.addEventListener('pointermove', e => { const r = svg.getBoundingClientRect(), i = Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width * W - L) / (W - L - R) * (n - 1)))), d = hist[i];
+    cur.style.display = ''; cur.firstChild.setAttribute('x1', x(i)); cur.firstChild.setAttribute('x2', x(i)); cur.lastChild.setAttribute('cx', x(i)); cur.lastChild.setAttribute('cy', y(d.breadth50 ?? 0));
+    showTip(e, d.day, [['Above 50-day average', pc(d.breadth50)], ['Trend', d.trend + '/3'], ['Exposure gate', d.gate]]); });
+  svg.addEventListener('pointerleave', () => { cur.style.display = 'none'; hideTip(); });
+  return svg;
+}
+function renderMarket() {
+  const m = board.market, c = m.components, st = model.market.byTrend[m.trend], g = model.market.gateCurves;
+  const fact = (ok, text) => h('div', { class: 'fact' }, h('span', { class: 'ic ' + (ok ? 'y' : 'n'), 'aria-hidden': 'true' }, ok ? '✓' : '✕'), h('span', {}, h('span', { class: 'muted' }, ok ? 'Yes — ' : 'No — '), text));
+  const cell = d => (d ? [sg(d.median), pc(d.pUp), pc(d.pDown10)] : ['—', '—', '—']);
+  const rows = [['BTC', st.BTC[30]], ['ETH', st.ETH[30]], ['Average coin on the board', st.universe[30]]].map(([n, d]) => h('tr', {}, h('td', {}, n), ...cell(d).map(v => h('td', {}, v))));
+  $('market').replaceChildren(h('h2', {}, 'Market'),
+    h('div', { class: 'hero' }, h('span', { class: 'big' }, m.trend + '/3'), h('span', { class: 'lbl' }, 'trend facts true · exposure gate '), h('span', { class: 'chip st-' + (m.gate === 'ON' ? 'good' : 'critical') }, h('span', { class: 'dot' }), `${m.gate} for ${m.gateDays} day${m.gateDays === 1 ? '' : 's'}`),
+      m.washout && h('span', { class: 'chip st-warning' }, h('span', { class: 'dot' }), 'washout: median RSI ' + m.medianRsi)),
+    h('div', { class: 'facts' },
+      fact(c.btcAbove200, `BTC closed ${sg(m.btcVs200)} vs its 200-day average`),
+      fact(c.btc30dUp, `BTC is ${sg(m.btc30d)} over 30 days`),
+      fact(c.breadthOk, `${pc(m.breadth50)} of the ${m.members} coins are above their 50-day average (needs ${pc(config.regime.breadthThreshold)})`)),
+    breadthChart(m.history),
+    h('h3', { style: 'margin-top:12px' }, `What followed the ${st.days} days like this since ${model.fittedFrom.slice(0, 4)} — next 30 days`),
+    h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Median'), h('th', {}, 'Ended higher'), h('th', {}, 'Fell 10%+'))), h('tbody', {}, rows))),
+    h('p', { class: 'note', style: 'margin-top:10px' }, `The gate is an exposure rule, not a forecast. From ${model.split} on, holding ETH only while it was ON returned ${sg(g.ETH.test.gated.totalPct, 0)} against ${sg(g.ETH.test.hold.totalPct, 0)} for buy-and-hold, with a worst drawdown of ${sg(g.ETH.test.gated.maxDrawdownPct, 0)} against ${sg(g.ETH.test.hold.maxDrawdownPct, 0)}; BTC ${sg(g.BTC.test.gated.totalPct, 0)} against ${sg(g.BTC.test.hold.totalPct, 0)}, drawdown ${sg(g.BTC.test.gated.maxDrawdownPct, 0)} against ${sg(g.BTC.test.hold.maxDrawdownPct, 0)}. It flips about ${g.ETH.test.gated.switchesPerYear} times a year and is late at both ends by design.`));
 }
 
-function ema(arr,period){
-  if(arr.length<period)return[];
-  const k=2/(period+1);
-  const result=[];
-  let prev=arr.slice(0,period).reduce((a,b)=>a+b,0)/period;
-  result.push(prev);
-  for(let i=period;i<arr.length;i++){
-    prev=arr[i]*k+prev*(1-k);
-    result.push(prev);
-  }
-  return result;
+/* ───────── range bar ───────── */
+function rangeBar(r, k) {
+  const b = r.bands[k]; if (!b) return h('p', { class: 'note' }, 'no range (needs 90 days of history)');
+  const W = 520, H = 40, lo = Math.log(Math.min(b.p05, r.price) * 0.985), hi = Math.log(Math.max(b.p95, r.price) * 1.015), x = v => 6 + (W - 12) * (Math.log(v) - lo) / (hi - lo), Y = 8, Hb = 12;
+  // outer 80% segments: 4px rounded on the outside end only, square where they meet the 50% band (2px surface gap)
+  const segL = (a, c) => s('path', { d: `M${x(a) + 4},${Y} H${x(c)} V${Y + Hb} H${x(a) + 4} Q${x(a)},${Y + Hb} ${x(a)},${Y + Hb - 4} V${Y + 4} Q${x(a)},${Y} ${x(a) + 4},${Y} Z`, fill: 'var(--band80)' });
+  const segR = (a, c) => s('path', { d: `M${x(a)},${Y} H${x(c) - 4} Q${x(c)},${Y} ${x(c)},${Y + 4} V${Y + Hb - 4} Q${x(c)},${Y + Hb} ${x(c) - 4},${Y + Hb} H${x(a)} Z`, fill: 'var(--band80)' });
+  const g = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${r.sym} ${k}-day range: 80% between ${fp(b.p10)} and ${fp(b.p90)}` },
+    segL(b.p10, b.p25), s('rect', { x: x(b.p25) + 2, y: Y, width: Math.max(0, x(b.p75) - x(b.p25) - 4), height: Hb, fill: 'var(--band50)' }), segR(b.p75, b.p90),
+    s('line', { x1: x(b.p50), x2: x(b.p50), y1: Y - 3, y2: Y + Hb + 3, stroke: 'var(--txt)', 'stroke-width': 2 }),
+    s('circle', { cx: x(r.price), cy: Y + Hb / 2, r: 5, fill: 'var(--txt)', stroke: 'var(--card)', 'stroke-width': 2 }),
+    s('text', { x: x(b.p10), y: H - 4, 'text-anchor': 'start' }, fp(b.p10)), s('text', { x: x(b.p90), y: H - 4, 'text-anchor': 'end' }, fp(b.p90)));
+  return hover(g, `${r.sym} — close ${k} days from now`, [['95% of the time below', fp(b.p95)], ['90%', fp(b.p90)], ['75%', fp(b.p75)], ['Median', fp(b.p50)], ['25%', fp(b.p25)], ['10%', fp(b.p10)], ['5% of the time below', fp(b.p05)], ['Now', fp(r.price)]]);
+}
+const quint = q => h('span', { class: 'q', title: q ? `fifth ${q} of 5 (5 = best)` : 'not ranked' }, ...[1, 2, 3, 4, 5].map(i => h('i', { class: q && i <= q ? 'on' : '' })));
+const rankText = r => (r.rank ? `#${r.rank} of ${board.rows.length} · ${r.tier}` : 'outside today’s universe');
+
+function renderMine() {
+  const cards = board.holdings.map(sym => { const r = rowOf(sym); if (!r) return null;
+    return h('div', { class: 'coin' },
+      h('div', { class: 'h' }, h('span', {}, h('b', {}, sym), ' ', quint(r.quintile), h('span', { class: 'tag' }, rankText(r))), h('span', { class: 'p mono' }, fp(r.price))),
+      h('div', { class: 'note' }, `7d ${sg(r.chg7)} · 30d ${sg(r.chg30)} · ${sg(r.near250)} from the 250-day high · moves ${(r.sigma * 100).toFixed(1)}% a day`),
+      h('div', { class: 'rb-l' }, h('span', {}, 'Next 7 days — 80% range (bright: 50%)'), h('span', {}, 'median ' + fp(r.bands[7]?.p50))), rangeBar(r, 7),
+      h('div', { class: 'rb-l' }, h('span', {}, 'Next 30 days'), h('span', {}, 'median ' + fp(r.bands[30]?.p50))), rangeBar(r, 30),
+      h('div', { style: 'margin-top:6px' }, h('button', { onclick: () => { selected = sym; renderDetail(); $('detail').scrollIntoView({ behavior: 'smooth' }); } }, 'Levels & plan →'))); }).filter(Boolean);
+  const V = model.forecast.validation[model.forecast.validation.chosen];
+  $('mine').replaceChildren(h('h2', {}, 'Your coins'), cards.length ? h('div', { class: 'grid' }, cards) : h('p', { class: 'note' }, 'Add tickers to holdings in pt.config.js.'),
+    h('p', { class: 'note', style: 'margin-top:10px' }, `Ranges are where the close has landed historically for a coin this volatile — not a direction call. Checked on data from ${model.split} on: the 80% range held ${pc(V.bands[7].in80)} of the time at 7 days and ${pc(V.bands[30].in80)} at 30.`));
 }
 
-function calcMACD(closes,fast=12,slow=26,signal=9){
-  if(closes.length<slow+signal)return null;
-  const emaFast=ema(closes,fast);
-  const emaSlow=ema(closes,slow);
-  // Align: emaSlow starts at index (slow-fast) of emaFast
-  const offset=slow-fast;
-  const macdLine=[];
-  for(let i=0;i<emaSlow.length;i++){
-    macdLine.push(emaFast[i+offset]-emaSlow[i]);
-  }
-  const sigLine=ema(macdLine,signal);
-  const sigOffset=macdLine.length-sigLine.length;
-  const hist=macdLine[macdLine.length-1]-sigLine[sigLine.length-1];
-  return{
-    macd:Math.round(macdLine[macdLine.length-1]*1000)/1000,
-    signal:Math.round(sigLine[sigLine.length-1]*1000)/1000,
-    histogram:Math.round(hist*1000)/1000
-  };
+/* ───────── coin detail: levels + plan ───────── */
+function renderDetail() {
+  const r = rowOf(selected) || board.rows[0]; selected = r.sym;
+  const sel = h('select', { onchange: e => { selected = e.target.value; renderDetail(); renderBoard(); } }, ...all().map(x => h('option', { value: x.sym, selected: x.sym === r.sym ? '' : null }, x.sym)));
+  const lv = board.levels.filter(l => l.sym === r.sym).sort((a, b) => b.level - a.level);
+  const lvRows = lv.map(l => h('tr', {}, h('td', {}, l.label, l.kind === 'watch' ? h('span', { class: 'tag' }, 'yours') : null), h('td', {}, fp(l.level)), h('td', {}, sg(l.distPct)), h('td', {}, pc(l.touch7)), h('td', {}, pc(l.touch30) + (l.extrapolated ? '*' : ''))));
+  const out = h('div', { class: 'kv' }), lvIn = h('input', { type: 'number', step: 'any', value: +(r.price * 0.8).toPrecision(4), 'aria-label': 'price level' });
+  const calcLevel = () => { const L = +lvIn.value; if (!(L > 0)) { out.replaceChildren(h('p', { class: 'note' }, 'Enter a price.')); return; }
+    out.replaceChildren(...HORIZONS.map(k => h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(touchProb(model, r.price, L, r.sigma, k), 1)), h('div', { class: 'l' }, `trades at ${fp(L)} within ${k} days`))),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, sg((L / r.price - 1) * 100)), h('div', { class: 'l' }, 'distance from ' + fp(r.price)), isExtrapolated(r.price, L, r.sigma) ? h('div', { class: 's' }, 'beyond anything measured — extrapolated') : null)); };
+  lvIn.addEventListener('input', calcLevel);
+  const P = config.plan, eIn = h('input', { type: 'number', step: 'any', value: +r.price.toPrecision(6) }), sIn = h('input', { type: 'number', step: 'any', value: +(r.price - P.stopAtr * r.atr).toPrecision(5) }), tIn = h('input', { type: 'number', step: 'any', value: +(r.price + P.targetAtr * r.atr).toPrecision(5) });
+  const kSel = h('select', {}, ...HORIZONS.map(k => h('option', { value: k, selected: k === P.maxDays ? '' : null }, k + ' days'))), pOut = h('div', {});
+  const calcPlan = () => { const o = planOdds(model, { entry: +eIn.value, stop: +sIn.value, target: +tIn.value, sigma: r.sigma, k: +kSel.value });
+    if (!o) { pOut.replaceChildren(h('p', { class: 'note' }, 'Needs stop < entry < target.')); return; }
+    const verdict = o.expR > 0.03 ? 'Historically positive for a random coin-day with this geometry.' : o.expR < -0.03 ? 'Historically negative: the target is reached too rarely for the reward it pays.' : 'Historically about break-even.';
+    pOut.replaceChildren(h('div', { class: 'kv' },
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(o.pTarget)), h('div', { class: 'l' }, 'target first'), h('div', { class: 's' }, `needs ${pc(o.breakeven)} to break even at ${o.rr.toFixed(2)}:1`)),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(o.pStop)), h('div', { class: 'l' }, 'stop first')),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(o.pOpen)), h('div', { class: 'l' }, 'neither by the time limit')),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, (o.expR >= 0 ? '+' : '−') + Math.abs(o.expR).toFixed(2) + 'R'), h('div', { class: 'l' }, 'average result per trade'), h('div', { class: 's' }, '1R = entry − stop'))),
+      h('p', { class: 'note', style: 'margin-top:8px' }, verdict + (o.clamped ? ' (Stop or target is outside the measured grid — edge value shown.)' : '') + ` Measured on every coin-day since ${model.fittedFrom.slice(0, 4)} with the same stop and target distance in units of daily volatility; rank and events shift this a little — see Events.`)); };
+  for (const el of [eIn, sIn, tIn]) el.addEventListener('input', calcPlan); kSel.addEventListener('change', calcPlan);
+  $('detail').replaceChildren(h('h2', {}, 'Coin detail'),
+    h('div', { class: 'row' }, h('label', {}, 'Coin', sel), h('span', { class: 'note' }, `${fp(r.price)} · ${rankText(r)} · moves ${(r.sigma * 100).toFixed(1)}% a day · ATR ${fp(r.atr)}`)),
+    h('div', { class: 'grid g2' },
+      h('div', {}, h('h3', {}, 'Will it trade at a level?'), lv.length ? h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Level'), h('th', {}, 'Price'), h('th', {}, 'Away'), h('th', {}, 'Within 7d'), h('th', {}, 'Within 30d'))), h('tbody', {}, lvRows))) : h('p', { class: 'note' }, 'Structure levels are listed for your holdings; any coin works in the calculator.'),
+        h('div', { class: 'row' }, h('label', {}, 'Any price (e.g. a liquidation level)', lvIn)), out,
+        h('p', { class: 'note', style: 'margin-top:8px' }, 'How often a level this many daily moves away was reached, intraday, across every coin-day measured. To be alerted on one, add it to watch in pt.config.js.')),
+      h('div', {}, h('h3', {}, 'Is a plan worth taking?'), h('div', { class: 'row' }, h('label', {}, 'Entry', eIn), h('label', {}, 'Stop', sIn), h('label', {}, 'Target', tIn), h('label', {}, 'Time limit', kSel)), pOut)));
+  calcLevel(); calcPlan();
 }
 
-function calcSQZMOM(closes,highs,lows,len=20){
-  // Simplified: momentum = close - average of (highest high + lowest low)/2 and SMA
-  if(closes.length<len)return null;
-  const recent=closes.slice(-len);
-  const recentH=highs.slice(-len);
-  const recentL=lows.slice(-len);
-  const hh=Math.max(...recentH),ll=Math.min(...recentL);
-  const mid=(hh+ll)/2;
-  const smaVal=recent.reduce((a,b)=>a+b,0)/len;
-  const val=closes[closes.length-1]-((mid+smaVal)/2);
-  // Check previous for direction
-  const prev=closes.slice(-len-1,-1);
-  const prevH=highs.slice(-len-1,-1);
-  const prevL=lows.slice(-len-1,-1);
-  const phh=Math.max(...prevH),pll=Math.min(...prevL);
-  const pmid=(phh+pll)/2;
-  const psma=prev.reduce((a,b)=>a+b,0)/len;
-  const prevVal=closes[closes.length-2]-((pmid+psma)/2);
-  return{value:Math.round(val*100)/100,rising:val>prevVal,positive:val>0};
+/* ───────── board ───────── */
+function renderBoard() {
+  const mine = new Set([...board.holdings, ...board.track]);
+  const F = { all: () => true, leaders: r => r.tier === 'leader', laggards: r => r.tier === 'laggard', events: r => r.events.length, mine: r => mine.has(r.sym) };
+  const rows = board.rows.filter(F[filter]);
+  const tr = r => h('tr', { class: 'click' + (r.sym === selected ? ' sel' : ''), onclick: () => { selected = r.sym; renderDetail(); renderBoard(); $('detail').scrollIntoView({ behavior: 'smooth' }); } },
+    h('td', {}, h('span', { class: 'muted mono' }, String(r.rank).padStart(2, ' ') + ' '), h('b', {}, r.sym), r.events.map(e => h('span', { class: 'tag' }, e.toLowerCase()))),
+    h('td', {}, quint(r.quintile)), h('td', { class: 'mono' }, fp(r.price)), h('td', {}, sg(r.chg7)), h('td', {}, sg(r.chg30)), h('td', {}, sg(r.near250, 0)), h('td', {}, (r.sigma * 100).toFixed(1) + '%'),
+    h('td', { class: 'mono' }, r.bands[7] ? `${fp(r.bands[7].p10)} – ${fp(r.bands[7].p90)}` : '—'));
+  const Q = model.rank.horizons[30].test.quintileExcess, Q7 = model.rank.horizons[7].test;
+  $('board').replaceChildren(h('h2', {}, `Board — ${board.rows.length} coins, ranked`),
+    h('p', { class: 'note', style: 'margin-bottom:10px' }, `Rank = closeness to the 250-day high + low volatility, the only two traits that kept working on data from ${model.split} on: 30 days later the best fifth averaged ${sg(Q[4])} against the market and the worst fifth ${sg(Q[0])} (7 days: ${sg(Q7.quintileExcess[4], 2)} and ${sg(Q7.quintileExcess[0], 2)}). It says which coins to prefer, not whether the market rises — when the market falls, leaders fall less.`),
+    h('div', { class: 'btns' }, ...Object.keys(F).map(k => h('button', { class: filter === k ? 'on' : '', onclick: () => { filter = k; renderBoard(); } }, k[0].toUpperCase() + k.slice(1)))),
+    h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Rank · coin'), h('th', {}, 'Fifth'), h('th', {}, 'Price'), h('th', {}, '7d'), h('th', {}, '30d'), h('th', {}, 'From high'), h('th', {}, 'Daily move'), h('th', {}, '7-day 80% range'))), h('tbody', {}, rows.length ? rows.map(tr) : h('tr', {}, h('td', { colspan: 8, class: 'tl muted' }, 'Nothing matches this filter today.'))))));
 }
 
-function calcOBV(closes,volumes){
-  let obv=0;
-  for(let i=1;i<closes.length;i++){
-    if(closes[i]>closes[i-1])obv+=volumes[i];
-    else if(closes[i]<closes[i-1])obv-=volumes[i];
-  }
-  // Check trend: compare last OBV to OBV 10 periods ago
-  let obv10=0;
-  const end=Math.max(1,closes.length-10);
-  for(let i=1;i<end;i++){
-    if(closes[i]>closes[i-1])obv10+=volumes[i];
-    else if(closes[i]<closes[i-1])obv10-=volumes[i];
-  }
-  return{value:obv,rising:obv>obv10};
+/* ───────── events ───────── */
+function renderEvents() {
+  const kids = [h('h2', {}, 'Events at the last close')];
+  if (!board.events.length) kids.push(h('p', { class: 'note' }, 'None today.'));
+  const groups = {}; for (const e of board.events) (groups[e.event + '|' + e.tier] = groups[e.event + '|' + e.tier] || []).push(e);
+  for (const [k, list] of Object.entries(groups)) { const [id, tier] = k.split('|'), E = model.events.byEvent[id], a = E.tiers[tier].all, t = E.tiers[tier].test;
+    kids.push(h('h3', {}, `${E.label} · ${tier}s`), h('p', { class: 'note' }, `${E.describe}. Measured ${a.n} times (${t.n} since ${model.split}): beat the market over 7 days ${pc(a[7]?.beat)} of the time, average ${sg(a[7]?.excessMean)}; the frozen plan averaged ${a.plan ? (a.plan.meanR >= 0 ? '+' : '−') + Math.abs(a.plan.meanR).toFixed(2) + 'R' : '—'} (any coin, any day: ${model.events.plan.baseline.all.meanR.toFixed(2)}R).`),
+      h('div', { class: 'scroll' }, h('table', {}, h('tbody', {}, list.map(e => h('tr', {}, h('td', {}, h('b', {}, e.sym), h('span', { class: 'muted' }, ' #' + e.rank)), h('td', { class: 'mono' }, fp(e.close)), h('td', { class: 'mono' }, 'target ' + fp(e.plan?.target)), h('td', { class: 'mono' }, 'stop ' + fp(e.plan?.stop)))))))); }
+  if (board.market.gate === 'OFF' && board.events.length) kids.push(h('p', { class: 'note' }, 'The exposure gate is OFF — these are relative-strength facts, not a reason to add risk.'));
+  if (card && card.recentEvents && card.recentEvents.length) kids.push(h('details', { style: 'margin-top:10px' }, h('summary', {}, `Logged events and how they ended (${card.recentEvents.length} most recent)`),
+    h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Day · coin'), h('th', {}, 'Event'), h('th', {}, 'Outcome'), h('th', {}, 'R'))), h('tbody', {}, card.recentEvents.map(e => h('tr', {}, h('td', {}, e.day.slice(5) + ' ', h('b', {}, e.sym)), h('td', {}, `${e.event.toLowerCase()} · ${e.tier}`), h('td', {}, e.outcome), h('td', { class: 'mono' }, e.R === null ? '—' : (e.R >= 0 ? '+' : '') + e.R.toFixed(2)))))))));
+  if (alerts && alerts.length) kids.push(h('details', { style: 'margin-top:10px' }, h('summary', {}, `Alerts sent (${alerts.length})`), ...alerts.slice(-12).reverse().map(a => h('pre', {}, `${a.at.slice(0, 16).replace('T', ' ')} UTC${a.delivered === false ? ' — TELEGRAM FAILED' : ''}\n${a.text}`))));
+  $('events').replaceChildren(...kids);
 }
 
-/* ===== SCORING FROM REAL DATA — MODE-AWARE ===== */
-/* ===== v8 REGIME LAYER — added above computeScore ===== */
-/* Classifies BULL / BEAR / RANGE from the macro timeframe (1D swing, 2H scalp)
-   then lets computeScore apply a macro veto + falling-knife guard. Pure TA. */
-function v8Ema(arr,period){
-  if(!arr||arr.length<period)return[];
-  const k=2/(period+1);const out=[];
-  let prev=arr.slice(0,period).reduce((a,b)=>a+b,0)/period;out.push(prev);
-  for(let i=period;i<arr.length;i++){prev=arr[i]*k+prev*(1-k);out.push(prev);}
-  return out;
+/* ───────── scorecard ───────── */
+function quintileChart() {
+  const Q = model.rank.horizons[30].test.quintileExcess, W = 520, H = 146, L = 8, R = 8, mx = Math.max(...Q.map(Math.abs)), y0 = 66, sc = 44 / mx, bw = (W - L - R) / 5;
+  return s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Average 30-day return against the market by rank fifth, since ' + model.split },
+    s('line', { x1: L, x2: W - R, y1: y0, y2: y0, stroke: 'var(--border-h)', 'stroke-width': 1 }),
+    ...Q.map((v, i) => { const x = L + bw * i + bw / 2 - 12, hh = Math.max(6, Math.abs(v) * sc), up = v >= 0;
+      const bar = s('path', { d: up ? `M${x},${y0} v${-(hh - 4)} q0,-4 4,-4 h16 q4,0 4,4 v${hh - 4} Z` : `M${x},${y0} v${hh - 4} q0,4 4,4 h16 q4,0 4,-4 v${-(hh - 4)} Z`, fill: up ? 'var(--pos)' : 'var(--neg)' });
+      hover(bar, ['Worst fifth', '2nd fifth', 'Middle fifth', '4th fifth', 'Best fifth'][i], [['30 days vs market', sg(v, 2)], ['7 days vs market', sg(model.rank.horizons[7].test.quintileExcess[i], 2)], ['Beat the market (30d)', pc(model.rank.horizons[30].test.quintileBeat[i])]]);
+      return [bar, s('text', { x: x + 12, y: up ? y0 - hh - 5 : y0 + hh + 13, 'text-anchor': 'middle', style: 'fill:var(--txt)' }, sg(v)), s('text', { x: x + 12, y: H - 4, 'text-anchor': 'middle' }, ['worst fifth', '2nd', '3rd', '4th', 'best fifth'][i])]; }));
 }
-function v8ConsecutiveRed(closes){
-  if(!closes||closes.length<2)return 0;
-  let n=0;for(let i=closes.length-1;i>0;i--){if(closes[i]<closes[i-1])n++;else break;}return n;
-}
-// closes = macro timeframe close array (raw). Returns 'BULL'|'BEAR'|'RANGE'.
-function v8ClassifyRegime(closes){
-  if(!closes||closes.length<60)return'RANGE';
-  const e50=v8Ema(closes,50);
-  const e200=v8Ema(closes,Math.min(200,closes.length-1));
-  if(!e50.length||!e200.length)return'RANGE';
-  const price=closes[closes.length-1];
-  const e50v=e50[e50.length-1],e200v=e200[e200.length-1];
-  const back=Math.max(0,e200.length-11);
-  const slope=(e200[e200.length-1]-e200[back])/e200[back];
-  if(price>e50v&&e50v>e200v&&slope>0)return'BULL';
-  if(price<e50v&&e50v<e200v&&slope<0)return'BEAR';
-  if(price<e50v&&price<e200v)return'BEAR';
-  return'RANGE';
-}
-/* ===== v8e MATH MODULE ===== */
-// Wilder ATR. Returns {series:[...], atr:last} in price units, aligned to closes[period..].
-function calcATR(highs,lows,closes,period){
-  period=period||V8E_PARAMS.atrPeriod;
-  if(!highs||!lows||!closes||closes.length<period+2)return null;
-  const trs=[];
-  for(let i=1;i<closes.length;i++){
-    trs.push(Math.max(highs[i]-lows[i],Math.abs(highs[i]-closes[i-1]),Math.abs(lows[i]-closes[i-1])));
-  }
-  let atr=trs.slice(0,period).reduce((a,b)=>a+b,0)/period;
-  const series=[atr];
-  for(let i=period;i<trs.length;i++){atr=(atr*(period-1)+trs[i])/period;series.push(atr);}
-  return{series,atr:series[series.length-1]};
-}
-// Confirmed swing pivots: a bar higher/lower than L bars each side. Excludes unconfirmed tail.
-function v8ePivots(highs,lows,L){
-  L=L||V8E_PARAMS.pivotLR;
-  const ph=[],pl=[];
-  if(!highs||highs.length<L*2+1)return{ph,pl};
-  for(let i=L;i<highs.length-L;i++){
-    let isH=true,isL=true;
-    for(let j=1;j<=L;j++){
-      if(highs[i]<=highs[i-j]||highs[i]<highs[i+j])isH=false;
-      if(lows[i]>=lows[i-j]||lows[i]>lows[i+j])isL=false;
-      if(!isH&&!isL)break;
-    }
-    if(isH)ph.push({i,v:highs[i]});
-    if(isL)pl.push({i,v:lows[i]});
-  }
-  return{ph,pl};
-}
-// Percentile rank (0-100) of the last ATR% (ATR/close) within its own history. Needs >=30 samples.
-function v8eVolPercentile(atrObj,closes){
-  if(!atrObj||!atrObj.series||!closes)return null;
-  const s=atrObj.series,off=closes.length-s.length;
-  if(off<0||s.length<30)return null;
-  const pcts=s.map((a,k)=>a/closes[k+off]);
-  const cur=pcts[pcts.length-1];
-  let below=0;for(const p of pcts)if(p<cur)below++;
-  return{pctile:Math.round(below/pcts.length*100),atrPct:cur*100};
-}
-// v8d: rolling %-change differential vs benchmark over N bars on the primary TF.
-function v8RelStrength(coinCloses,benchCloses,bars){
-  bars=bars||V8E_PARAMS.rsBars;
-  if(!coinCloses||!benchCloses)return null;
-  const n=Math.min(bars,coinCloses.length-1,benchCloses.length-1);
-  if(n<5)return null;
-  const cc=coinCloses[coinCloses.length-1]/coinCloses[coinCloses.length-1-n]-1;
-  const bc=benchCloses[benchCloses.length-1]/benchCloses[benchCloses.length-1-n]-1;
-  return(cc-bc)*100;
-}
-// v8d: recent 10-bar avg volume vs prior 10-bar. ratio<threshold on BULL = demote to RANGE.
-function v8VolumeTrend(volumes){
-  if(!volumes||volumes.length<20)return null;
-  const rec=volumes.slice(-10).reduce((a,b)=>a+b,0)/10;
-  const pri=volumes.slice(-20,-10).reduce((a,b)=>a+b,0)/10;
-  if(pri<=0)return null;
-  return{ratio:rec/pri};
-}
-// Weekly open from 1D candles (swing): open of the most recent Monday (UTC).
-function v8eWeeklyOpen(opens,times){
-  if(!opens||!times||opens.length!==times.length)return null;
-  for(let i=times.length-1;i>=0;i--){
-    if(new Date(times[i]).getUTCDay()===1)return opens[i];
-  }
-  return null;
-}
-// Most recent HIGHER low on a TF (last pivot low above the one before it) — structure trail anchor.
-function v8eHigherLow(highs,lows){
-  const{pl}=v8ePivots(highs,lows);
-  if(pl.length<2)return null;
-  const a=pl[pl.length-1],b=pl[pl.length-2];
-  return a.v>b.v?a.v:null;
+function renderScore() {
+  const V = model.forecast.validation[model.forecast.validation.chosen], kids = [h('h2', {}, 'Scorecard — is it still true?')];
+  const tile = (v, l, sub, meter) => h('div', { class: 'tile' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l), sub ? h('div', { class: 's' }, sub) : null, meter ? h('div', { class: 'meter', 'aria-hidden': 'true' }, h('b', { style: `width:${Math.min(100, meter[0] * 100)}%` }), h('u', { style: `left:${meter[1] * 100}%` })) : null);
+  if (card && card.daysLogged) {
+    const b7 = card.bands[7], b30 = card.bands[30], r7 = card.rank[7], per = (b, k) => (b.days ? `${b.n} forecasts, but only ≈${Math.max(1, Math.round(b.days / k))} separate ${k}-day periods` : 'none matured yet');
+    kids.push(h('p', { class: 'note' }, `Live since ${card.firstDay}: ${card.daysLogged} daily close${card.daysLogged === 1 ? '' : 's'} logged. Every forecast is frozen when made and scored when it matures.`),
+      h('div', { class: 'kv' },
+        tile(b7.n ? pc(b7.in80) : '—', '7-day 80% ranges that held', per(b7, 7) + ' · target 80%', b7.n ? [b7.in80, 0.8] : null),
+        tile(b30.n ? pc(b30.in80) : '—', '30-day 80% ranges that held', per(b30, 30) + ' · target 80%', b30.n ? [b30.in80, 0.8] : null),
+        tile(r7.n ? sg(r7.topExcess, 2) : '—', 'best fifth vs market, per 7 days', r7.n ? `${r7.n} days · backtest ${sg(model.rank.horizons[7].test.quintileExcess[4], 2)}` : 'none matured yet'),
+        card.gate ? tile(sg(card.gate.eth.gated), 'ETH held only while the gate was ON', `buy-and-hold ${sg(card.gate.eth.hold)} · ${card.gate.days} days, ${card.gate.switches} switches`) : null));
+    const ev = Object.entries(card.events); if (ev.length) kids.push(h('div', { class: 'scroll', style: 'margin-top:10px' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Event plans closed'), h('th', {}, 'n'), h('th', {}, 'Avg R'), h('th', {}, 'Winners'), h('th', {}, 'Backtest R'))), h('tbody', {}, ev.map(([k, e]) => { const [id, tier] = k.split('|'); return h('tr', {}, h('td', {}, `${id.toLowerCase()} · ${tier}`), h('td', {}, e.n), h('td', { class: 'mono' }, (e.meanR >= 0 ? '+' : '') + e.meanR.toFixed(2)), h('td', {}, pc(e.win)), h('td', { class: 'mono' }, (m => (m === undefined ? '—' : (m >= 0 ? '+' : '') + m.toFixed(2)))(model.events.byEvent[id]?.tiers[tier]?.all.plan?.meanR))); })))));
+  } else kids.push(h('p', { class: 'note' }, 'No live record yet. Once the hourly scan runs (README, step 2) every range, rank and event plan is frozen at the daily close and scored here when it matures — 7 days for the first numbers.'));
+  kids.push(h('h3', { style: 'margin-top:14px' }, `Before it was allowed on screen — tested on ${model.split} → ${model.fittedThrough}`),
+    h('div', { class: 'kv' }, tile(pc(V.bands[7].in80), '7-day 80% ranges held', `${V.bands[7].n.toLocaleString('en-US')} coin-days · target 80%`, [V.bands[7].in80, 0.8]), tile(pc(V.bands[30].in80), '30-day 80% ranges held', 'target 80%', [V.bands[30].in80, 0.8]),
+      tile(pc(V.plan.realisedTarget), 'plans that reached target first', `model said ${pc(V.plan.predictedTarget)} · stops ${pc(V.plan.realisedStop)} vs ${pc(V.plan.predictedStop)}`)),
+    h('div', { class: 'rb-l', style: 'margin-top:12px' }, h('span', {}, 'Average 30-day return against the market, by rank fifth')), quintileChart(),
+    h('p', { class: 'note' }, `The range tables were fitted before ${model.split} and scored after it — a true out-of-sample check. The rank and gate rules were chosen with the whole history in view, so for them this period is supporting evidence, not proof; the live record above is the independent test. `),
+    h('p', { class: 'note', style: 'margin-top:6px' }, `Model measured ${model.generatedAt.slice(0, 10)} on ${model.sample.memberDays.toLocaleString('en-US')} coin-days (${model.fittedFrom} → ${model.fittedThrough}). Full tables: `, h('a', { href: `https://github.com/${config.repo}/blob/main/model/REPORT.md` }, 'model/REPORT.md'), ' · why v11 looks like this: ', h('a', { href: `https://github.com/${config.repo}/blob/main/docs/EVIDENCE.md` }, 'docs/EVIDENCE.md'), '.'));
+  $('score').replaceChildren(...kids);
 }
 
-// detect lower-highs over the macro window (bearish structure)
-function v8LowerHighs(closes,lookback=30){
-  if(!closes||closes.length<lookback)return false;
-  const idx=closes.length-1;const start=Math.max(1,idx-lookback);const highs=[];
-  for(let i=start+1;i<idx;i++)if(closes[i]>closes[i-1]&&closes[i]>closes[i+1])highs.push(closes[i]);
-  return highs.length>=2&&highs[highs.length-1]<highs[highs.length-2];
+function render(scanStale) {
+  renderHead(scanStale); renderMarket(); renderMine(); renderDetail(); renderBoard(); renderEvents(); renderScore();
+  $('foot').textContent = `PrecisionTimer ${board.version} · decisions use closed daily candles only; live prices are for distance and display · data: ${board.source || 'Binance spot'} · not financial advice`;
 }
-
-function computeScore(d){
-  const h1=d['1h'],h4=d['4h'],h12=d['12h'],d1=d['1d'];
-  if(!h4)return{score:0,signal:'NO DATA',sigColor:'var(--txt4)',indicators:[]};
-  let sc_regime='RANGE',sc_knife=false; // v8 state
-
-  // Mode-aware timeframe labels
-  const L=MODE_CONFIG[mode].labels; // e.g. ['1H','4H','12H','1D'] or ['15M','30M','1H','2H']
-  const L1=L[0],L2=L[1],L3=L[2],L4=L[3];
-
-  let buyPts=0,sellPts=0;
-  const inds=[];
-
-  // Helper to score one RSI
-  function scoreRSI(tf,rsi,weight){
-    if(rsi===null)return;
-    const os=rsi<35,ob=rsi>70;
-    const bullZone=rsi>=40&&rsi<=60;   // healthy trending range
-    const leanOS=rsi>=35&&rsi<40;       // leaning oversold (was a dead zone)
-    const leanOB=rsi>60&&rsi<=70;       // leaning overbought (was a dead zone)
-    if(os)buyPts+=weight;
-    else if(leanOS)buyPts+=Math.round(weight*.6);  // partial buy credit
-    else if(bullZone)buyPts+=Math.round(weight*.4);
-    if(ob)sellPts+=weight;
-    else if(leanOB)sellPts+=Math.round(weight*.3);  // minor sell lean
-    const isBull=os||leanOS||bullZone;
-    inds.push({tf,name:'RSI 14',val:rsi.toFixed(1),bull:isBull,bear:ob||leanOB,
-      score:os?85:leanOS?72:bullZone?60:leanOB?35:ob?20:40});
-  }
-  // Helper to score one Stoch RSI
-  function scoreStoch(tf,stoch,weight){
-    if(!stoch)return;
-    const os=stoch.k<30,ob=stoch.k>70;
-    const curl=stoch.k<50&&stoch.k>stoch.d;    // K crossing above D from low
-    const leanOS=stoch.k>=30&&stoch.k<40;        // leaning oversold
-    const leanOB=stoch.k>60&&stoch.k<=70;        // leaning overbought
-    if(os)buyPts+=weight;
-    else if(curl)buyPts+=Math.round(weight*.6);   // curling up = strong
-    else if(leanOS)buyPts+=Math.round(weight*.4);  // leaning oversold even without curl
-    if(ob)sellPts+=weight;
-    else if(leanOB&&stoch.k<stoch.d)sellPts+=Math.round(weight*.3); // rolling over from elevated
-    const isBull=os||curl||leanOS;
-    const sub=os?'Oversold':ob?'Overbought':curl?'K > D curling up':leanOS?'Low range':leanOB?'Elevated':'Mid-range';
-    inds.push({tf,name:'Stoch RSI',val:stoch.k.toFixed(1)+' / '+stoch.d.toFixed(1),bull:isBull,bear:ob||(leanOB&&stoch.k<stoch.d),
-      score:os?90:curl?68:leanOS?58:ob?15:leanOB?30:45,sub});
-  }
-  // Helper to score one MACD
-  // FIX: only count as sell when MACD is rolling over from positive (actual top signal)
-  // Not when MACD is just negative in a flat/down market (that's baseline, not a signal)
-  function scoreMACD(tf,macd,weight){
-    if(!macd)return;
-    const bullX=macd.histogram>0,conv=macd.macd<0&&macd.histogram>0;
-    const rollover=macd.macd>0&&macd.histogram<0; // was positive, hist turning neg = real sell
-    const deepBear=macd.macd<0&&macd.histogram<0; // just negative = not a signal, neutral
-    if(conv)buyPts+=weight; else if(bullX)buyPts+=Math.round(weight*.8);
-    if(rollover)sellPts+=weight; // only real rollover counts as sell
-    // deepBear does NOT add sellPts — it's just the baseline in a downtrend
-    inds.push({tf,name:'MACD',val:macd.macd.toFixed(2),bull:bullX||conv,bear:rollover,
-      score:conv?75:bullX?70:rollover?20:deepBear?35:45,sub:'Hist: '+(macd.histogram>0?'+':'')+macd.histogram.toFixed(2)});
-  }
-  // Helper for SQZMOM
-  function scoreSQZ(tf,sqz,weight){
-    if(!sqz)return;
-    const green=sqz.positive||sqz.rising;
-    if(green&&sqz.rising)buyPts+=weight;
-    else if(green)buyPts+=Math.round(weight*.5);
-    else if(sqz.rising)buyPts+=Math.round(weight*.3); // negative but rising = recovering
-    // Only sell if was positive and now contracting (actual momentum reversal)
-    // Negative + contracting in a downtrend is just baseline, not a signal
-    // We don't add sellPts for SQZMOM at all — it's a momentum confirmation, not a sell trigger
-    inds.push({tf,name:'SQZMOM',val:sqz.value.toFixed(2),bull:green||sqz.rising,bear:!sqz.positive&&!sqz.rising,
-      score:green&&sqz.rising?80:green?58:sqz.rising?50:25,sub:sqz.rising?'Expanding':'Contracting'});
-  }
-
-  // --- Fastest TF (1H swing / 15m scalp) — entry timing, lighter weight ---
-  if(h1){
-    scoreRSI(L1,h1.rsi,5);
-    scoreStoch(L1,h1.stoch,6);
-    scoreMACD(L1,h1.macd,4);
-  }
-
-  // --- Primary TF (4H swing / 30m scalp) — primary signal ---
-  scoreRSI(L2,h4.rsi,10);
-  scoreStoch(L2,h4.stoch,12);
-  scoreMACD(L2,h4.macd,8);
-  scoreSQZ(L2,h4.sqz,6);
-
-  // --- Structural TF (12H swing / 1H scalp) — confirmation, heaviest weight ---
-  if(h12){
-    scoreRSI(L3,h12.rsi,12);
-    scoreStoch(L3,h12.stoch,14);
-    scoreMACD(L3,h12.macd,10);
-    scoreSQZ(L3,h12.sqz,7);
-  }
-
-  // --- Macro TF (1D swing / 2H scalp) — trend context ---
-  if(d1){
-    scoreRSI(L4,d1.rsi,8);
-    scoreStoch(L4,d1.stoch,8);
-  }
-
-  // ===== MULTI-TIMEFRAME SELL CONFLUENCE =====
-  // Count how many timeframes have GENUINE sell signals
-  // Key fix: negative MACD/SQZMOM in a flat market is NOT a sell signal
-  // A real sell TF needs: overbought oscillator rolling over, NOT just "things are negative"
-  let sellTFs=0,sellDetails=[];
-  function checkTFSell(label,tf){
-    if(!tf)return;
-    let reasons=[];
-    const hasOBStoch=tf.stoch&&tf.stoch.k>70;
-    const hasOBRsi=tf.rsi!==null&&tf.rsi>70;
-    const macdRollover=tf.macd&&tf.macd.macd>0&&tf.macd.histogram<0; // MACD positive but hist turning neg = rollover
-    const stochRollover=tf.stoch&&tf.stoch.k>60&&tf.stoch.k<tf.stoch.d; // K crossing below D from elevated level
-
-    // Must have at least one overbought reading OR a rollover from elevated levels
-    if(!hasOBStoch&&!hasOBRsi&&!macdRollover&&!stochRollover)return;
-
-    if(hasOBStoch)reasons.push('Stoch RSI overbought ('+tf.stoch.k.toFixed(0)+')');
-    if(hasOBRsi)reasons.push('RSI overbought ('+tf.rsi.toFixed(0)+')');
-    if(macdRollover)reasons.push('MACD rolling over (hist: '+tf.macd.histogram.toFixed(2)+')');
-    if(stochRollover)reasons.push('Stoch K crossing below D from '+tf.stoch.k.toFixed(0));
-    if(tf.sqz&&!tf.sqz.positive&&!tf.sqz.rising&&(hasOBStoch||hasOBRsi))reasons.push('SQZMOM confirming red');
-
-    if(reasons.length>=2){sellTFs++;sellDetails.push({tf:label,reasons})}
-  }
-  checkTFSell(L1,h1);
-  checkTFSell(L2,h4);
-  checkTFSell(L3,h12);
-  checkTFSell(L4,d1);
-
-  // Count how many timeframes have GENUINE buy signals
-  // Key fix: positive MACD in a rising market is NOT a buy signal by itself
-  // A real buy TF needs: oversold oscillator curling up, NOT just "things are positive"
-  let buyTFs=0,buyDetails=[];
-  function checkTFBuy(label,tf){
-    if(!tf)return;
-    let reasons=[];
-    const hasOSStoch=tf.stoch&&tf.stoch.k<30;
-    const hasOSRsi=tf.rsi!==null&&tf.rsi<35;
-    const macdConverge=tf.macd&&tf.macd.macd<0&&tf.macd.histogram>0; // MACD negative but hist turning pos = converging
-    const stochCurl=tf.stoch&&tf.stoch.k<40&&tf.stoch.k>tf.stoch.d; // K crossing above D from low level
-
-    // Must have at least one oversold reading OR a bullish convergence from depressed levels
-    if(!hasOSStoch&&!hasOSRsi&&!macdConverge&&!stochCurl)return;
-
-    if(hasOSStoch)reasons.push('Stoch RSI oversold ('+tf.stoch.k.toFixed(0)+')');
-    if(hasOSRsi)reasons.push('RSI oversold ('+tf.rsi.toFixed(0)+')');
-    if(macdConverge)reasons.push('MACD converging (hist: +'+tf.macd.histogram.toFixed(2)+')');
-    if(stochCurl)reasons.push('Stoch K crossing above D at '+tf.stoch.k.toFixed(0));
-    if(tf.sqz&&tf.sqz.rising&&(hasOSStoch||hasOSRsi))reasons.push('SQZMOM confirming expansion');
-
-    if(reasons.length>=2){buyTFs++;buyDetails.push({tf:label,reasons})}
-  }
-  checkTFBuy(L1,h1);
-  checkTFBuy(L2,h4);
-  checkTFBuy(L3,h12);
-  checkTFBuy(L4,d1);
-
-  // ===== ZONE-AWARE SCORING — unified with scale-out stages =====
-  const z=calcZones(d);
-  const p=d.price;
-  const inZone=p>=z.buyLo&&p<=z.buyHi;
-  const belowZone=p<z.buyLo;
-  const aboveZone=p>z.buyHi;
-  const atSellZone=p>=z.sellLo;
-  const nearSellZone=p>=z.sellLo*(mode==='scalp'?0.99:0.97);
-  const pctAboveZone=aboveZone?((p-z.buyHi)/p*100):0;
-  const pctToZone=aboveZone?pctAboveZone:0;
-  // Scale-out stages — match updateBanner logic
-  const stgHolding=p>z.buyHi&&p<z.t1;
-  const stgTP1=p>=z.t1&&p<z.t2;
-  const stgTP2=p>=z.t2&&p<z.t3;
-  const stgTP3=p>=z.t3;
-
-  const penMult=mode==='scalp'?0.25:1;
-
-  // Raw indicator score
-  let rawScore;
-  if(buyPts>sellPts){
-    rawScore=Math.min(100,50+Math.round(buyPts*1.1));
-  }else if(sellPts>buyPts){
-    rawScore=Math.max(0,45-Math.round(sellPts*.8));
-  }else{
-    rawScore=42;
-  }
-
-  let score=rawScore;
-  let signal,sigColor;
-
-  // ===== STAGE-AWARE SIGNALS — align with updateBanner =====
-  // TP3 stage — exit or trail final 20%
-  if(stgTP3&&sellTFs>=2){
-    signal='🔴 TP3 — EXIT FINAL 20%';sigColor='var(--rose)';
-    score=Math.max(8,Math.min(20,rawScore));
-  }else if(stgTP3){
-    signal='🔴 TP3 HIT — TRAIL OR EXIT';sigColor='var(--rose)';
-    score=Math.max(20,Math.min(35,rawScore));
-
-  // TP2 stage — scale out 30%
-  }else if(stgTP2&&sellTFs>=2){
-    signal='🟠 TP2 + SELL PRESSURE — SCALE 30%';sigColor='var(--rose)';
-    score=Math.max(15,Math.min(30,rawScore));
-  }else if(stgTP2){
-    signal='🟠 TP2 HIT — SCALE OUT 30%';sigColor='var(--amber)';
-    score=Math.max(30,Math.min(45,rawScore));
-
-  // TP1 stage — scale out 50%
-  }else if(stgTP1&&sellTFs>=2){
-    signal='🟡 TP1 + SELL PRESSURE — SCALE 50%';sigColor='var(--amber)';
-    score=Math.max(20,Math.min(38,rawScore));
-  }else if(stgTP1){
-    signal='🟡 TP1 HIT — SCALE OUT 50%';sigColor='var(--amber)';
-    score=Math.max(38,Math.min(55,rawScore));
-
-  // Holding zone — between buy zone and TP1
-  }else if(stgHolding&&sellTFs>=3){
-    signal='⚠ SELL PRESSURE IN HOLD — TIGHTEN';sigColor='var(--rose)';
-    score=Math.max(25,Math.min(42,rawScore));
-  }else if(stgHolding&&sellTFs>=2){
-    signal='⚠ CAUTION — '+sellTFs+' TF selling';sigColor='var(--amber)';
-    score=Math.max(40,Math.min(55,rawScore));
-  }else if(stgHolding&&buyTFs>=2){
-    signal='🟢 HOLD — trending to TP1';sigColor='var(--em)';
-    score=Math.max(62,Math.min(78,rawScore));
-  }else if(stgHolding){
-    signal='HOLD — let profits run';sigColor='var(--em2)';
-    score=Math.max(55,Math.min(72,rawScore));
-
-  // ===== BUY SIGNALS (price at/below zone) =====
-  }else if(buyTFs>=3&&(inZone||belowZone)){
-    signal='🟢 STRONG BUY — '+buyTFs+' of 4 timeframes aligned';sigColor='var(--em)';
-    score=Math.min(100,90+buyTFs*2);
-  }else if(buyTFs>=3&&aboveZone){
-    const penalty=Math.min(20,Math.round(pctToZone*4*penMult));
-    score=Math.max(55,85-penalty);
-    signal='🟢 '+buyTFs+' of 4 aligned — wait for zone';sigColor='var(--amber)';
-  }else if(buyTFs>=2&&(inZone||belowZone)&&rawScore>=65){
-    signal='🟢 BUY — '+buyTFs+' of 4 timeframes confirmed';sigColor='var(--em)';
-    score=Math.min(98,rawScore+10);
-  }else if(buyTFs>=2&&inZone){
-    signal='BUY — IN ZONE ('+buyTFs+' of 4)';sigColor='var(--em)';
-    score=Math.min(95,rawScore+5);
-  }else if(buyTFs>=2&&belowZone){
-    signal='BUY — BELOW ZONE ('+buyTFs+' of 4)';sigColor='var(--em)';
-    score=Math.min(98,rawScore+8);
-  }else if(buyTFs>=2&&aboveZone){
-    const penalty=Math.min(25,Math.round(pctToZone*5*penMult));
-    score=Math.max(45,rawScore-penalty);
-    signal='SETUP FORMING — '+buyTFs+' of 4 timeframes bullish';sigColor='var(--amber)';
-  }else if(inZone&&rawScore>=70){
-    signal='STRONG BUY — IN ZONE';sigColor='var(--em)';
-    score=Math.min(100,rawScore+5);
-  }else if(inZone&&rawScore>=55){
-    signal='BUY — IN ZONE';sigColor='var(--em)';
-    score=rawScore;
-  }else if(inZone){
-    signal='IN ZONE — WEAK';sigColor='var(--amber)';
-    score=rawScore;
-  }else if(belowZone&&rawScore>=70){
-    signal='STRONG BUY — BELOW ZONE';sigColor='var(--em)';
-    score=Math.min(100,rawScore+8);
-  }else if(belowZone&&rawScore>=55){
-    signal='BUY — BELOW ZONE';sigColor='var(--em2)';
-    score=rawScore;
-  }else if(belowZone){
-    signal='BELOW ZONE';sigColor='var(--txt3)';
-    score=rawScore;
-
-  // Fallback — shouldn't normally reach (holding catches above-zone/below-TP1)
-  }else if(sellPts>buyPts){
-    signal='CAUTION';sigColor='var(--rose)';
-    score=Math.max(15,rawScore);
-  }else{
-    signal='WAIT';sigColor='var(--txt4)';
-    score=rawScore;
-  }
-
-  score=Math.max(0,Math.min(100,score));
-
-  // Add zone context to indicators — scale-out aware
-  const zVal=stgTP3?'AT TP3 ⚠':stgTP2?'AT TP2':stgTP1?'AT TP1':stgHolding?'HOLDING → TP1':inZone?'IN BUY ZONE ✓':belowZone?'BELOW ZONE ↓':pctToZone.toFixed(1)+'% above';
-  const zSub=stgTP3?'TP3 '+fmtP(z.t3)+' — exit/trail':stgTP2?'TP2 '+fmtP(z.t2)+' — scale 30%':stgTP1?'TP1 '+fmtP(z.t1)+' — scale 50%':stgHolding?'Next: TP1 '+fmtP(z.t1):inZone?fmtP(z.buyLo)+'–'+fmtP(z.buyHi):belowZone?'Below '+fmtP(z.buyLo):'Target: '+fmtP(z.buyHi);
-  const zScore=stgTP3?15:stgTP2?30:stgTP1?45:stgHolding?70:inZone?95:belowZone?90:Math.max(10,80-Math.round(pctToZone*8*penMult));
-  const zoneNote={tf:'ZONE',name:'Price vs Target Ladder',val:zVal,
-    bull:inZone||belowZone||stgHolding,bear:stgTP3||(stgTP2&&sellTFs>=2)||sellTFs>=3,
-    score:zScore,sub:zSub};
-  inds.unshift(zoneNote);
-
-  // Add sell confluence warning if active
-  if(sellTFs>=2){
-    const sellNote={tf:'⚠',name:'Multi-timeframe sell confluence',
-      val:sellTFs+' of 4 timeframes',bull:false,bear:true,score:5,
-      sub:sellDetails.map(s=>s.tf+': '+s.reasons[0]).join(' · ')};
-    inds.splice(1,0,sellNote);
-  }
-
-  // Add buy confluence indicator if active
-  if(buyTFs>=2){
-    const buyNote={tf:'🟢',name:'Multi-timeframe buy confluence',
-      val:buyTFs+' of 4 timeframes',bull:true,bear:false,score:90,
-      sub:buyDetails.map(s=>s.tf+': '+s.reasons[0]).join(' · ')};
-    inds.splice(1,0,buyNote);
-  }
-
-    /* ===== v8 MACRO VETO + FALLING-KNIFE GUARD =====
-     Applied AFTER the existing signal/score logic. Uses raw macro closes
-     stashed on d.__macroCloses (highest TF) during analyzeSymbol. */
-  (function applyV8Veto(){
-    const macroCloses=d.__macroCloses;
-    if(!macroCloses||macroCloses.length<60)return; // not enough data, leave score as-is
-    // v8b: anchor regime to the TRADING timeframes (4H + 12H), not the 1D macro.
-    // Read both; if either trading TF is clearly bearish, regime is BEAR.
-    const c4=d.__primaryCloses;          // 4H swing / 30m scalp
-    const c12=d.__structCloses;          // 12H swing / 1H scalp
-    function tfBear(closes,macdObj){
-      if(!closes||closes.length<55)return false;
-      const e=v8Ema(closes,50);
-      const below=e.length?closes[closes.length-1]<e[e.length-1]:false;
-      const negFalling=macdObj&&macdObj.macd<0&&macdObj.histogram<0;
-      return below&&negFalling;
-    }
-    function tfBull(closes,macdObj){
-      if(!closes||closes.length<55)return false;
-      const e=v8Ema(closes,50);
-      const above=e.length?closes[closes.length-1]>e[e.length-1]:false;
-      const posRising=macdObj&&macdObj.macd>0&&macdObj.histogram>0;
-      return above&&posRising;
-    }
-    const macd4=(h4&&h4.macd)?h4.macd:null;
-    const macd12=(h12&&h12.macd)?h12.macd:null;
-    const bear4=tfBear(c4,macd4), bear12=tfBear(c12,macd12);
-    const bull4=tfBull(c4,macd4), bull12=tfBull(c12,macd12);
-    let regime;
-    if(bear4||bear12) regime='BEAR';           // either trading TF broken = bear
-    else if(bull4&&bull12) regime='BULL';        // both trading TFs up = bull
-    else regime=v8ClassifyRegime(macroCloses);   // otherwise fall back to macro read
-    // v8d: volume-confirmed regime — a BULL read on fading volume is a suspect BULL. Demote.
-    // v9: STRONG spot-ETF inflows are real bid that candles don't show — they lift THIS
-    // demotion only (an un-veto, never a score add; all other veto paths untouched).
-    if(regime==='BULL'){
-      const vt=v8VolumeTrend(d.__macroVols);
-      const fl=(d.coin&&flowFor(d.coin.short))||null;
-      const flowBacksBull=fl&&fl.state==='STRONG_IN';
-      if(vt&&vt.ratio<V8E_PARAMS.volTrendDemote&&!flowBacksBull)regime='RANGE';
-    }
-    const lowerHighs=v8LowerHighs(macroCloses);
-    const redDays=v8ConsecutiveRed(macroCloses);
-    const e50=v8Ema(macroCloses,50);
-    const below50=e50.length?macroCloses[macroCloses.length-1]<e50[e50.length-1]:false;
-    // primary-TF stoch for knife detection (4H swing / 30m scalp)
-    const pStoch=(h4&&h4.stoch)?h4.stoch.k:50;
-    const pMacd=(h4&&h4.macd)?h4.macd:null;
-
-    let knife=false;
-    // expose regime for the UI
-    sc_regime=regime;
-
-    if(regime==='BEAR'){
-      // can't say "hold profits / buy" in a confirmed bear leg
-      if(score>45){
-        score=45;
-        // v8c: fully rewrite the label in BEAR regime so wording matches the capped score.
-        // Don't keep stale "BUY / scale in / bottom confirmed" text from the confluence engine.
-        signal='⚠ BEAR REGIME — caution, no new longs';
-        sigColor='var(--amber)';
-      }
-      // MACD still rolling down -> cap harder
-      if(pMacd&&pMacd.histogram<0){score=Math.min(score,38);}
-      // lower highs confirm distribution
-      if(lowerHighs)score=Math.min(score,40);
-      // FALLING-KNIFE GUARD: oversold in bear + below 50EMA + consecutive red = DON'T buy
-      // v8b: bounce-in-downtrend gap — both trading TFs deeply negative & falling
-      if(macd4&&macd12&&macd4.macd<0&&macd12.macd<0&&macd4.histogram<0&&macd12.histogram<0){
-        score=Math.min(score,40);
-      }
-      if(pStoch<25&&below50&&redDays>=2){
-        knife=true;score=Math.min(score,28);
-        signal='🔪 FALLING KNIFE — oversold in downtrend, do NOT buy';sigColor='var(--rose)';
-      }
-    }
-    sc_knife=knife;
-
-    /* ===== v9 FLOW VETO + POSITIONING CHASE-GUARD =====
-       Layered gates, applied AFTER regime caps, BEFORE structure bonus. Fail-safe:
-       missing/STALE data changes nothing (and the UI says so — no silent degradation). */
-    (function applyV9Gates(){
-      const short=d.coin?d.coin.short:null;
-      const fl=short?flowFor(short):null;
-      if(fl&&fl.state==='STRONG_OUT'&&score>V8E_PARAMS.flow.strongOutCap){
-        score=V8E_PARAMS.flow.strongOutCap;
-        if(regime!=='BEAR'){signal='◈ ETF OUTFLOW VETO — institutions selling, no full-size longs';sigColor='var(--amber)';}
-      }
-      const pos=short?__posState[d.coin.sym||'']||__posState[short+'USDT']:null;
-      if(pos&&pos.state==='CROWDED_LONG'&&regime!=='BEAR'&&score>V8E_PARAMS.positioning.crowdedLongCap){
-        score=V8E_PARAMS.positioning.crowdedLongCap;
-        signal='⚠ CROWDED LONGS — trend intact but late, wait for flush or retest';sigColor='var(--amber)';
-      }
-    })();
-
-    /* ===== v8e STRUCTURE CONFLUENCE (never active in BEAR — regime gates interpretation) =====
-       Entry at a prior confirmed pivot low is categorically better than mid-air oversold.
-       Bonus applied ONLY outside BEAR, and the veto's caps above already ran — BEAR paths untouched. */
-    (function(){
-      const sh=d.__structHighs,sl=d.__structLows,scl=d.__structCloses;
-      const atrS=calcATR(sh,sl,scl);
-      if(atrS&&atrS.atr>0){
-        const{pl}=v8ePivots(sh,sl);
-        if(pl.length){
-          const lastPL=pl[pl.length-1].v;
-          const dist=Math.abs(d.price-lastPL)/atrS.atr;
-          if(dist<=V8E_PARAMS.structProxATR){
-            const atStruct=regime!=='BEAR';
-            inds.push({tf:'🏗',name:atStruct?'Structure support (pivot low)':'Structure level (BEAR — reference only)',
-              val:fmtP(lastPL)+' · '+dist.toFixed(2)+' ATR away',bull:atStruct,bear:!atStruct,score:atStruct?70:30,
-              sub:'Last confirmed '+MODE_CONFIG[mode].labels[2]+' swing low · ATR('+V8E_PARAMS.atrPeriod+') '+fmtP(atrS.atr)});
-            if(atStruct)score=Math.min(95,score+V8E_PARAMS.structBonus);
-          }
-        }
-      }
-      // Weekly open (swing only) — display-only context row, no score impact (unbacktested inputs don't move the score)
-      if(mode==='swing'){
-        const wo=v8eWeeklyOpen(d.__macroOpens,d.__macroTimes);
-        if(wo){
-          const above=d.price>wo;
-          inds.push({tf:'W',name:'Weekly open',val:(above?'Above ':'Below ')+fmtP(wo),
-            bull:above,bear:!above,score:above?60:40,sub:'Most recent Monday open (UTC) — trend context'});
-        }
-      }
-    })();
-    // v8c: in BEAR regime, soften any buy-confluence indicator row so it doesn't read as all-clear
-    if(regime==='BEAR'&&Array.isArray(inds)){
-      for(const ind of inds){
-        if(ind&&ind.name&&ind.name.indexOf('buy confluence')>=0){
-          ind.bull=false;ind.bear=true;
-          ind.name='Buy confluence (BEAR — discount only)';
-          ind.score=Math.min(ind.score,35);
-        }
-      }
-    }
-    score=Math.max(0,Math.min(100,score));
-  })();
-
-
-  /* ===== v9.2 TURN-DETECTION MODULE =====
-     Aug '26 replay findings this addresses:
-     - TOP ($2,547): stochs pinned overbought from $2,200 (sell cried wolf for days); the real tells
-       were EXTENSION (price >3 ATR above EMA20) + exhaustion-range bar + momentum divergence.
-     - BOTTOM ($1,869): higher-low retest of the $1,854 washout — structure SEQUENCE, invisible to
-       oscillators (nothing oversold at the launch bar).
-     All computed from candle arrays already fetched. Bounded score deltas; badges in breakdown. */
-  (function(){
-    const ph_=d.__primaryHighs,pl_=d.__primaryLows,pc_=d.__primaryCloses;
-    if(!ph_||!pl_||!pc_||pc_.length<40)return;
-    const L2=MODE_CONFIG[mode].labels[1];
-    function emaArr(v,n){const o=[];const m=2/(n+1);for(let i=0;i<v.length;i++)o.push(i?v[i]*m+o[i-1]*(1-m):v[i]);return o}
-    function rsiArr(v,n){n=n||14;const o=new Array(v.length).fill(null);let g=0,l=0;
-      for(let i=1;i<v.length;i++){const ch=v[i]-v[i-1],up=Math.max(ch,0),dn=Math.max(-ch,0);
-        if(i<=n){g+=up;l+=dn;if(i===n){g/=n;l/=n;o[i]=100-100/(1+(l?g/l:1e9))}}
-        else{g=(g*(n-1)+up)/n;l=(l*(n-1)+dn)/n;o[i]=100-100/(1+(l?g/l:1e9))}}return o}
-    const atrO=calcATR(ph_,pl_,pc_);if(!atrO||!(atrO.atr>0))return;
-    const atr=atrO.atr,p_=d.price,r_=rsiArr(pc_);
-
-    // --- 1) EXTENSION GAUGE (stretch meter): price distance from EMA20 in ATR units ---
-    const e20=emaArr(pc_,20);
-    const ext=(p_-e20[e20.length-1])/atr;
-    const extHot=ext>=3,extCold=ext<=-3;
-    inds.push({tf:L2,name:'Extension (EMA20 dist)',val:ext.toFixed(1)+' ATR',
-      bull:extCold,bear:extHot,score:extHot?20:extCold?80:50,
-      sub:extHot?'>3 ATR stretched — blow-off risk, chasing here is late':extCold?'<-3 ATR washed — capitulation zone':'normal range'});
-    if(extHot)score=Math.max(0,score-8);
-    if(extCold)score=Math.min(100,score+6);
-
-    // --- 2) EXHAUSTION / CLIMAX BAR (last CLOSED bar): range >2.2x ATR closing off the extreme ---
-    const n_=pc_.length;
-    if(n_>=3){
-      const hi=ph_[n_-2],lo=pl_[n_-2],cl=pc_[n_-2],rng=hi-lo;
-      if(rng>atr*2.2){
-        const posInBar=(cl-lo)/rng; // 0=closed at low, 1=closed at high
-        if(posInBar<0.33&&p_>e20[e20.length-1]){ // huge bar closing weak while extended = top exhaustion
-          inds.push({tf:L2,name:'Exhaustion bar (top)',val:(rng/atr).toFixed(1)+'x ATR range',bull:false,bear:true,score:20,
-            sub:'Climax range, closed in bottom third — buyer exhaustion'});
-          score=Math.max(0,score-6);
-        }else if(posInBar>0.67&&p_<e20[e20.length-1]){ // huge bar closing strong while depressed = capitulation reversal
-          inds.push({tf:L2,name:'Capitulation bar (bottom)',val:(rng/atr).toFixed(1)+'x ATR range',bull:true,bear:false,score:80,
-            sub:'Climax range, closed in top third — seller exhaustion'});
-          score=Math.min(100,score+6);
-        }
-      }
-    }
-
-    // --- 3) MOMENTUM DIVERGENCE at pivots (primary TF, recency-gated) ---
-    const pv=v8ePivots(ph_,pl_);
-    function lastTwo(a){return a.length>=2?[a[a.length-2],a[a.length-1]]:null}
-    const RECENT=12; // pivot must be within 12 bars of now to act on it
-    const pls=lastTwo(pv.pl),phs=lastTwo(pv.ph);
-    // Zone filter: divergence only counts from stretched territory (first pivot RSI <=38 for bull,
-    // >=68 for bear). Mid-range "divergences" (e.g. RSI 64->62) are noise — Aug '26 replay proof.
-    if(pls&&pls[1].i>=n_-RECENT&&r_[pls[0].i]!==null&&r_[pls[1].i]!==null&&r_[pls[0].i]<=38){
-      if(pls[1].v<pls[0].v&&r_[pls[1].i]>r_[pls[0].i]){
-        inds.push({tf:L2,name:'Bullish divergence',val:'price LL · RSI HL',bull:true,bear:false,score:82,
-          sub:fmtP(pls[0].v)+'→'+fmtP(pls[1].v)+' vs RSI '+r_[pls[0].i].toFixed(0)+'→'+r_[pls[1].i].toFixed(0)});
-        score=Math.min(100,score+(sc_regime==='BEAR'?4:8));
-      }
-    }
-    if(phs&&phs[1].i>=n_-RECENT&&r_[phs[0].i]!==null&&r_[phs[1].i]!==null&&r_[phs[0].i]>=68){
-      if(phs[1].v>phs[0].v&&r_[phs[1].i]<r_[phs[0].i]){
-        inds.push({tf:L2,name:'Bearish divergence',val:'price HH · RSI LH',bull:false,bear:true,score:18,
-          sub:fmtP(phs[0].v)+'→'+fmtP(phs[1].v)+' vs RSI '+r_[phs[0].i].toFixed(0)+'→'+r_[phs[1].i].toFixed(0)});
-        score=Math.max(0,score-10);
-      }
-    }
-
-    // --- 4) STRUCTURE SEQUENCE (struct TF): higher-low retest = the Aug-16 bottom pattern ---
-    const sh_=d.__structHighs,sl_=d.__structLows,scl_=d.__structCloses;
-    if(sh_&&sl_&&scl_){
-      const atrS=calcATR(sh_,sl_,scl_);
-      const pvS=v8ePivots(sh_,sl_);
-      const plsS=lastTwo(pvS.pl);
-      if(atrS&&atrS.atr>0&&plsS){
-        const higherLow=plsS[1].v>plsS[0].v;
-        const nearRetest=Math.abs(p_-plsS[1].v)/atrS.atr<=1.0;
-        if(higherLow&&nearRetest&&sc_regime!=='BEAR'){
-          inds.push({tf:'🏗',name:'Higher-low retest',val:fmtP(plsS[0].v)+' → '+fmtP(plsS[1].v),bull:true,bear:false,score:78,
-            sub:'Pivot sequence rising & price at retest — structural bottom pattern'});
-          score=Math.min(100,score+6);
-        }else if(plsS[1].v<plsS[0].v){ // lower-low sequence: informational only
-          inds.push({tf:'🏗',name:'Structure sequence',val:'lower lows',bull:false,bear:true,score:35,
-            sub:'Pivot lows still declining — no basing yet'});
-        }
-      }
-    }
-
-    // --- 5) SELL-SIDE TREND GATE: overbought only counts on MACD-hist ROLLOVER ---
-    // (fixes "sell from $2,200": stoch pinned + hist EXPANDING = trend, not top)
-    const hst=(function(){const f=emaArr(pc_,12),s=emaArr(pc_,26);const ln=f.map((v,i)=>v-s[i]);const sg=emaArr(ln,9);return ln.map((v,i)=>v-sg[i])})();
-    const hN=hst.length;
-    if(hN>=4&&hst[hN-2]>0){
-      const rolling=hst[hN-2]<hst[hN-3]&&hst[hN-3]<hst[hN-4];
-      const stoch4=d.h4&&d.h4.stoch;
-      if(stoch4&&stoch4.k>70){
-        if(!rolling){
-          inds.push({tf:L2,name:'Trend gate',val:'OB but hist expanding',bull:true,bear:false,score:62,
-            sub:'Overbought in an EXPANDING trend — sell pressure discounted (rollover not confirmed)'});
-          score=Math.min(100,score+5);
-        }else{
-          inds.push({tf:L2,name:'Trend gate',val:'OB + hist rolling 2 bars',bull:false,bear:true,score:25,
-            sub:'Overbought AND momentum rolling over — sell signal validated'});
-          score=Math.max(0,score-5);
-        }
-      }
-    }
-    score=Math.max(0,Math.min(100,score));
-  })();
-
-  /* ===== v9.3 DISPLAY ROWS (no score impact — unbacktested inputs don't move the score) ===== */
-  (function(){
-    // Estimated liquidation shelves from the leverage model
-    const pc_=d.__primaryCloses,pv_=d.__primaryVols,ph_=d.__primaryHighs,pl_=d.__primaryLows;
-    if(pc_&&pv_&&ph_&&pl_){
-      const aO=calcATR(ph_,pl_,pc_);
-      if(aO&&aO.atr>0){
-        const lq=v93LiqShelves(pc_,pv_,d.price,aO.atr);
-        if(lq){
-          if(lq.longShelf!==null){
-            const dpct=(d.price-lq.longShelf)/d.price*100;
-            inds.push({tf:'💧',name:'Long-liq shelf (est)',val:fmtP(lq.longShelf)+' · '+dpct.toFixed(1)+'% below',
-              bull:dpct>6,bear:dpct<=3,score:dpct>6?58:dpct<=3?38:50,
-              sub:'Leverage-model estimate, not exchange data · magnet/cascade zone · strength '+Math.round(lq.longStr*100)+'% of downside density'});
-          }
-          if(lq.shortBand!==null){
-            const upct=(lq.shortBand-d.price)/d.price*100;
-            inds.push({tf:'💧',name:'Short-liq fuel (est)',val:fmtP(lq.shortBand)+' · '+upct.toFixed(1)+'% above',
-              bull:upct<=4,bear:false,score:upct<=4?62:50,
-              sub:'Leverage-model estimate · squeeze target if reclaimed · strength '+Math.round(lq.shortStr*100)+'% of upside density'});
-          }
-        }
-      }
-    }
-    // ETHBTC regime (global, daily) — context for how far a signal generalizes
-    if(__ethbtc){
-      inds.push({tf:'Ξ/₿',name:'ETHBTC regime',val:__ethbtc.state+' · '+(__ethbtc.pctVsEma>=0?'+':'')+__ethbtc.pctVsEma.toFixed(1)+'% vs EMA50',
-        bull:__ethbtc.state==='ETH LEADING',bear:__ethbtc.state==='ETH LAGGING',
-        score:__ethbtc.state==='ETH LEADING'?62:__ethbtc.state==='ETH LAGGING'?38:50,
-        sub:'Daily ETHBTC vs EMA50 (10d slope '+(__ethbtc.slope10>=0?'+':'')+__ethbtc.slope10.toFixed(1)+'%) — ETH-specific vs market-wide move'});
-    }
-  })();
-
-  return{score,signal,sigColor,buyPts,sellPts,sellTFs,buyTFs,rawScore,indicators:inds,regime:sc_regime,knife:sc_knife};
-}
-
-/* ===== FETCH ===== */
-let workingEndpoint=null;
-
-async function fetchKlines(symbol,interval,limit=100){
-  // If we already found a working endpoint, use it first
-  const endpoints=workingEndpoint?[workingEndpoint,...ENDPOINTS.filter(e=>e!==workingEndpoint)]:ENDPOINTS;
-  let lastErr='';
-  
-  for(const base of endpoints){
-    try{
-      const url=`${base}?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-      const r=await fetch(url);
-      if(!r.ok){
-        const hostname=base.startsWith('/')?'proxy':base.split('/')[2];
-        lastErr='HTTP '+r.status+' from '+hostname;
-        if(r.status===429||r.status===418){
-          // Rate limited - wait and retry on next endpoint
-          await new Promise(res=>setTimeout(res,2000));
-        }
-        continue;
-      }
-      const data=await r.json();
-      if(!Array.isArray(data)||!data.length){lastErr='empty response';continue}
-      workingEndpoint=base;
-      // Drop the last candle if it's still forming (its close time is in the future)
-      // This prevents indicator values from wiggling as the current candle ticks
-      const now=Date.now();
-      const lastCandle=data[data.length-1];
-      const lastCloseTime=lastCandle[6]; // k[6] = close time
-      const klines=lastCloseTime&&lastCloseTime>now?data.slice(0,-1):data;
-      const closes=klines.map(k=>parseFloat(k[4]));
-      const highs=klines.map(k=>parseFloat(k[2]));
-      const lows=klines.map(k=>parseFloat(k[3]));
-      const volumes=klines.map(k=>parseFloat(k[5]));
-      const opens=klines.map(k=>parseFloat(k[1]));
-      // Use the REAL current price from the last (forming) candle for display
-      const currentPrice=parseFloat(lastCandle[4]);
-      const times=klines.map(k=>k[0]);
-      return{closes,highs,lows,volumes,opens,times,
-        price:currentPrice,
-        open24:opens.length>6?opens[opens.length-6]:opens[0],
-        high24:Math.max(...highs.slice(-6)),
-        low24:Math.min(...lows.slice(-6))
-      };
-    }catch(e){lastErr=e.message||'fetch error';continue}
-  }
-  throw new Error(symbol+' '+interval+': '+lastErr);
-}
-
-async function analyzeSymbol(coin){
-  const cfg=MODE_CONFIG[mode];
-  // Fetch 4 timeframes SEQUENTIALLY with small delays to avoid rate limits
-  // (Parallel Promise.all hits rate limits hard, especially on data-api.binance.vision)
-  const results=[];
-  for(let i=0;i<cfg.tfs.length;i++){
-    results.push(await fetchKlines(coin.sym,cfg.tfs[i],cfg.limits[i]));
-    if(i<cfg.tfs.length-1)await new Promise(r=>setTimeout(r,50));
-  }
-  const [tf1raw,tf2raw,tf3raw,tf4raw]=results;
-
-  const buildTF=(raw)=>({
-    rsi:calcRSI(raw.closes,14),
-    stoch:calcStochRSI(raw.closes,14,14,3,3),
-    macd:calcMACD(raw.closes,12,26,9),
-    sqz:calcSQZMOM(raw.closes,raw.highs,raw.lows,20),
-    price:raw.price
-  });
-
-  const h1=buildTF(tf1raw); // fastest TF (1H in swing, 15m in scalp)
-  const h4={...buildTF(tf2raw),obv:calcOBV(tf2raw.closes,tf2raw.volumes),
-    high24:tf2raw.high24,low24:tf2raw.low24,
-    ch:tf2raw.open24?((tf2raw.price-tf2raw.open24)/tf2raw.open24*100):0}; // primary TF (4H/30m)
-  const h12=buildTF(tf3raw); // structural TF (12H/1H)
-  const d1=buildTF(tf4raw);  // macro TF (1D/2H)
-
-  return{coin,h1,h4,h12,d1,'1h':h1,'4h':h4,'12h':h12,'1d':d1,price:h4.price,ch:h4.ch,
-    __macroCloses:tf4raw.closes,__primaryCloses:tf2raw.closes,__structCloses:tf3raw.closes,
-    // v8d/v8e raw stashes — computed once here, consumed by regime/zones/sizer/trailing/RS
-    __macroVols:tf4raw.volumes,__macroOpens:tf4raw.opens,__macroTimes:tf4raw.times,
-    __rsCloses:tf2raw.closes,__primaryVols:tf2raw.volumes,
-    __structHighs:tf3raw.highs,__structLows:tf3raw.lows,
-    __primaryHighs:tf2raw.highs,__primaryLows:tf2raw.lows};
-}
-
-/* ===== STATUS ===== */
-function showSt(m,t){
-  const b=document.getElementById('st');
-  const c={ok:{bg:'var(--em-bg)',bc:'rgba(52,211,153,.15)',co:'var(--em)',i:'●'},warn:{bg:'var(--amber-bg)',bc:'rgba(251,191,36,.15)',co:'var(--amber)',i:'◐'},err:{bg:'var(--rose-bg)',bc:'rgba(251,113,133,.15)',co:'var(--rose)',i:'✕'},load:{bg:'var(--card)',bc:'var(--border)',co:'var(--txt3)',i:'◌'}}[t]||{};
-  b.style.background=c.bg;b.style.border='1px solid '+c.bc;b.style.color=c.co;
-  b.innerHTML=c.i+' '+m;b.classList.add('v');
-  if(t==='ok')setTimeout(()=>b.classList.remove('v'),4000);
-}
-
-/* ===== RENDER ===== */
-function fmtP(v){return v>=1?'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'$'+v.toPrecision(4)}
-
-/* ===== DYNAMIC ZONES PER COIN — MODE-AWARE ===== */
-function calcZones(d){
-  /* v8e: zones are ATR- and structure-anchored, per mode, driven entirely by V8E_PARAMS.
-     The v7 ETH hardcode ($2,025/$2,350 ladder) is REMOVED — static levels were the April failure.
-     Anchor TF: structure TF for swing (12H), primary TF for scalp (30M).
-     Geometry: buy zone brackets the last confirmed pivot low; stop = sweet - stopATR x ATR;
-     R = sweet - stop; TPs = sweet + tpR[i] x R; sell zone brackets the last pivot high. */
-  const p=d.price;
-  const h4=d.h4;
-  const P=V8E_PARAMS[mode];
-  const useStruct=mode==='swing';
-  const hs=useStruct?d.__structHighs:d.__primaryHighs;
-  const ls=useStruct?d.__structLows:d.__primaryLows;
-  const cs=useStruct?d.__structCloses:d.__primaryCloses;
-
-  let atr=null;
-  const atrObj=(hs&&ls&&cs)?calcATR(hs,ls,cs):null;
-  if(atrObj&&atrObj.atr>0)atr=atrObj.atr;
-  // Fallback if candles are short: legacy day-range proxy (flagged via atrSource)
-  const dayRange=h4&&h4.high24&&h4.low24?(h4.high24-h4.low24):p*0.05;
-  const atrSource=atr?'atr':'range';
-  if(!atr)atr=dayRange;
-
-  // Structure anchors: last confirmed pivots; fallback to recent extremes
-  let pivotLow=null,pivotHigh=null;
-  if(hs&&ls){
-    const{ph,pl}=v8ePivots(hs,ls);
-    if(pl.length)pivotLow=pl[pl.length-1].v;
-    if(ph.length)pivotHigh=ph[ph.length-1].v;
-  }
-  if(pivotLow===null)pivotLow=ls&&ls.length?Math.min(...ls.slice(-20)):(h4.low24||p*0.97);
-  if(pivotHigh===null)pivotHigh=hs&&hs.length?Math.max(...hs.slice(-20)):(h4.high24||p*1.03);
-  // Sanity: a pivot high below the pivot low means stale structure — widen to recent extremes
-  if(pivotHigh<=pivotLow){
-    pivotLow=ls&&ls.length?Math.min(...ls.slice(-20)):pivotLow;
-    pivotHigh=hs&&hs.length?Math.max(...hs.slice(-20)):pivotLow+atr*2;
-  }
-
-  /* ===== v9.1 DYNAMIC RE-ANCHOR (stale-ladder guard) =====
-     Failure mode this fixes: after a fast trend leg, the last CONFIRMED pivot low sits far
-     below spot, so the whole TP ladder (sweet + R x tpR) prints BELOW current price —
-     "targets from the past." Re-anchor when price has consumed the entire ladder:
-     pick the freshest pivot low within reach (4 ATR below spot); if none confirmed yet
-     (vertical move, pivots lag by pivotLR bars), trail on the recent structural low. */
-  let reanchored=false,extended=false;
-  const ladderTopATR=P.stopATR*P.tpR[P.tpR.length-1]; // full ladder height in ATR units
-  if(p>pivotLow+atr*ladderTopATR){
-    let na=null;
-    if(hs&&ls){
-      const pv2=v8ePivots(hs,ls);
-      for(let k=pv2.pl.length-1;k>=0;k--){const v=pv2.pl[k].v;if(v<p&&v>p-atr*4){na=v;break}}
-    }
-    if(na===null&&ls&&ls.length){
-      const tl=Math.min(...ls.slice(-(V8E_PARAMS.pivotLR*2+4)));
-      if(tl<p&&tl>p-atr*4)na=tl; // trailing low only if within reach; else synthetic below
-    }
-    if(na===null)na=p-atr*1.5; // synthetic trailing anchor: never leave the ladder in the past
-    pivotLow=na;reanchored=true;
-  }
-  // Expected-local-top broken: project the sell zone as an ATR extension above spot
-  if(p>pivotHigh){pivotHigh=p+atr*0.75;extended=true;}
-
-  const buyLo=+(pivotLow-atr*P.buyLoATR).toPrecision(6);
-  const buyHi=+(pivotLow+atr*P.buyHiATR).toPrecision(6);
-  const sweet=+pivotLow.toPrecision(6);
-  const stop=+(sweet-atr*P.stopATR).toPrecision(6);
-  const R=sweet-stop; // one risk unit, ATR-defined
-  const t1=+(sweet+R*P.tpR[0]).toPrecision(6);
-  const t2=+(sweet+R*P.tpR[1]).toPrecision(6);
-  const t3=+(sweet+R*P.tpR[2]).toPrecision(6);
-  const sellLo=+(pivotHigh-atr*P.sellLoATR).toPrecision(6);
-  const sellHi=+(pivotHigh+atr*P.sellHiATR).toPrecision(6);
-  /* v9.1 roll-forward: per-TP hit flags + next actionable targets.
-     hits[] preserves ladder semantics for zone-stage / expectancy continuity;
-     next[] = unhit ladder targets, padded with ATR-extension targets so the
-     dashboard ALWAYS shows at least 3 live targets above spot. */
-  const hits=[p>=t1,p>=t2,p>=t3];
-  const next=[];
-  [[t1,'TP1'],[t2,'TP2'],[t3,'TP3']].forEach(pair=>{if(p<pair[0])next.push({price:pair[0],label:pair[1],ext:false})});
-  let ek=0;
-  while(next.length<3){ek++;next.push({price:+(Math.max(t3,p)+atr*1.5*ek).toPrecision(6),label:'EXT'+ek,ext:true});}
-  return{buyLo,buyHi,sweet,stop,t1,t2,t3,sellLo,sellHi,atr,atrSource,pivotLow,pivotHigh,reanchored,extended,hits,next};
-}
-
-/* ===== UPDATE TRADE PANELS (called from updateBanner + input changes) ===== */
-function updatePanels(){
-  const d=allData[selSym];if(!d)return;
-  const z=calcZones(d);
-  const p=d.price;
-  const sym=d.coin.short;
-  const sc=computeScore(d);
-
-  // --- Buy zone card ---
-  document.getElementById('zBuyTitle').innerHTML=fmtP(z.buyLo)+' – '+fmtP(z.buyHi)+' <span class="he">(Sweet '+fmtP(z.sweet)+')</span>'+(z.reanchored?' <span style="color:var(--amber);font-size:10px" title="Prior ladder fully consumed — zone re-anchored to freshest structure">RE-ANCHORED ⟳</span>':'');
-  const stoch=d.h4.stoch;const rsi=d.h4.rsi;
-  const primaryTFLabel=MODE_CONFIG[mode].labels[1]; // "4H" in swing, "30M" in scalp
-  const subParts=[];
-  if(stoch)subParts.push(primaryTFLabel+' Stoch '+(stoch.k<30?'oversold':stoch.k>70?'overbought':'neutral'));
-  if(rsi)subParts.push('RSI '+rsi.toFixed(0));
-  if(d.h4.macd)subParts.push('MACD '+(d.h4.macd.histogram>0?'bullish':'converging'));
-  document.getElementById('zBuySub').textContent=subParts.join(' · ')||'Analyzing…';
-
-  if(p>z.buyHi){document.getElementById('zBuyDist').innerHTML='<span style="color:var(--amber)">'+((p-z.buyHi)/p*100).toFixed(1)+'% above</span>'}
-  else if(p>=z.buyLo){document.getElementById('zBuyDist').innerHTML='<span style="color:var(--em)">IN ZONE ✓</span>'}
-  else{document.getElementById('zBuyDist').innerHTML='<span style="color:var(--blue)">'+((z.buyLo-p)/p*100).toFixed(1)+'% below</span>'}
-
-  const statusTxt=sc.score>=75?'Building Upside ↑':sc.score>=55?'Setup Forming':'Consolidating';
-  document.getElementById('zBuy4h').textContent=statusTxt+' ('+sc.score+')';
-  document.getElementById('zBuy4h').style.color=sc.score>=75?'var(--em)':sc.score>=55?'var(--em2)':'var(--amber)';
-  // Update status label to reflect primary timeframe
-  const statLblEl=document.getElementById('zBuyStatLbl');
-  if(statLblEl)statLblEl.textContent=primaryTFLabel+' Status';
-  document.getElementById('zBuyStop').textContent=fmtP(z.stop);
-
-  // R:R bar
-  const risk=z.sweet-z.stop,rew=z.t1-z.sweet,total=risk+rew;
-  if(total>0){
-    document.getElementById('rrRisk').style.width=Math.round(risk/total*100)+'%';
-    document.getElementById('rrRew').style.width=Math.round(rew/total*100)+'%';
-    document.getElementById('rrRiskL').textContent=fmtP(risk)+' risk';
-    document.getElementById('rrRewL').textContent=fmtP(rew)+' to TP1 ('+(rew/risk).toFixed(1)+':1)';
-  }
-
-  // --- Sell zone card ---
-  const liveTgt=(z.next&&z.next.length)?z.next[0].price:z.t1; // v9.1: first UNHIT target, never a past one
-  document.getElementById('zSellTitle').innerHTML=fmtP(z.sellLo)+' – '+fmtP(z.sellHi)+' <span class="hr">(Target '+fmtP(liveTgt)+')</span>'+(z.extended?' <span style="color:var(--amber);font-size:10px" title="Prior local top broken — sell zone projected +0.75 ATR above spot">ATR-PROJECTED ⤴</span>':'');
-  const sellSub=mode==='scalp'
-    ?'Quick rejection expected · '+MODE_CONFIG[mode].labels[1]+'/'+MODE_CONFIG[mode].labels[2]+' Stoch overbought'
-    :MODE_CONFIG[mode].labels[1]+' Stoch RSI overbought rollover expected · MACD histogram peak zone';
-  document.getElementById('zSellSub').textContent=sellSub;
-  if(p>=z.sellHi){document.getElementById('zSellDist').innerHTML='<span style="color:var(--rose)">IN ZONE ⚠</span>'}
-  else if(p>=z.sellLo){document.getElementById('zSellDist').innerHTML='<span style="color:var(--rose)">ENTERING</span>'}
-  else{document.getElementById('zSellDist').innerHTML='<span style="color:var(--txt2)">'+((z.sellLo-p)/p*100).toFixed(1)+'% away</span>'}
-  document.getElementById('zSellSig').textContent=p>=z.sellLo?'SELL ALERT':'Watching';
-  document.getElementById('zSellSig').style.color=p>=z.sellLo?'var(--rose)':'var(--txt3)';
-  document.getElementById('zSellRR').textContent=risk>0?(rew/risk).toFixed(1)+' : 1':'—';
-
-  // --- Position sizer ---
-  const acct=+document.getElementById('szA').value||0;
-  const riskPct=+document.getElementById('szR').value||0;
-  const entry=+document.getElementById('szE').value||0;
-  const stop=+document.getElementById('szS').value||0;
-  // v8e: volatility regime overlay — percentile of current ATR% within its own macro-TF history.
-  // High vol percentile = the exact conditions that force deleveraging events. Cut size FIRST.
-  let volInfo=null;
-  {
-    const aObj=calcATR(mode==='swing'?d.__structHighs:d.__primaryHighs,
-                       mode==='swing'?d.__structLows:d.__primaryLows,
-                       mode==='swing'?d.__structCloses:d.__primaryCloses);
-    volInfo=v8eVolPercentile(aObj,mode==='swing'?d.__structCloses:d.__primaryCloses);
-  }
-  const szVolEl=document.getElementById('szVol');
-  if(acct&&riskPct&&entry&&stop&&entry>stop){
-    const riskAmt=acct*(riskPct/100);
-    const perUnit=entry-stop;
-    let qty=riskAmt/perUnit;
-    let volLine='Vol regime: n/a (insufficient candles)';
-    if(volInfo){
-      if(volInfo.pctile>=V8E_PARAMS.volHighPct){
-        const halfQty=qty*V8E_PARAMS.volHighSizeMult;
-        volLine='<span style="color:var(--amber)">⚠ VOL P'+volInfo.pctile+' HIGH · ATR '+volInfo.atrPct.toFixed(2)+'% — first tranche HALF size: <b>'+halfQty.toFixed(4)+' '+sym+'</b> · keep ammo for the better level</span>';
-      }else if(volInfo.pctile<=V8E_PARAMS.volLowPct){
-        volLine='<span style="color:var(--em)">Vol P'+volInfo.pctile+' LOW · ATR '+volInfo.atrPct.toFixed(2)+'% — full planned tranche OK, expect slower tape</span>';
-      }else{
-        volLine='Vol P'+volInfo.pctile+' NORMAL · ATR '+volInfo.atrPct.toFixed(2)+'% — standard tranche sizing';
-      }
-    }
-    if(szVolEl)szVolEl.innerHTML=volLine;
-    document.getElementById('szRes').innerHTML='Buy <b>'+qty.toFixed(4)+' '+sym+'</b> · $'+Math.round(qty*entry).toLocaleString()+' pos · $'+Math.round(riskAmt)+' risk';
-
-    // --- Scale-out planner ---
-    const tiers=[{pct:50,tgt:z.t1,label:'TP1'},{pct:30,tgt:z.t2,label:'TP2'},{pct:20,tgt:z.t3,label:'TP3 (trail)'}];
-    let totalPL=0;
-    document.getElementById('soBody').innerHTML=tiers.map(t=>{
-      const q=qty*(t.pct/100),pl=(t.tgt-entry)*q;totalPL+=pl;
-      return`<div class="so-row"><span class="so-pct">${t.pct}%</span><span style="color:var(--txt)">${t.label}</span><span class="so-tgt">${fmtP(t.tgt)}</span><span class="so-pl">+$${Math.round(pl).toLocaleString()}</span></div>`
-    }).join('');
-    document.getElementById('soTotal').innerHTML='Total projected: <b>+$'+Math.round(totalPL).toLocaleString()+'</b> on '+qty.toFixed(4)+' '+sym;
-  }else{
-    document.getElementById('szRes').textContent='Enter valid values';
-    if(szVolEl)szVolEl.textContent='Vol regime: —';
-    document.getElementById('soBody').textContent='—';
-    document.getElementById('soTotal').textContent='—';
-  }
-
-  // --- Trailing stop ---
-  // Trailing stop — scale-out aware
-  // If past TP1, trail behind recent highs. If past TP2, trail tighter. Baseline: ATR * 1.2 from current
-  const atTP1Ts=p>=z.t1&&p<z.t2;
-  const atTP2Ts=p>=z.t2&&p<z.t3;
-  const atTP3Ts=p>=z.t3;
-  const holdingTs=p>z.buyHi&&p<z.t1;
-
-  // v8e: structure trail — the most recent HIGHER low on the primary TF. Past TP1,
-  // "exit on close below the last higher low" beats a fixed trail; trends outrun fixed ladders.
-  const structHL=v8eHigherLow(d.__primaryHighs,d.__primaryLows);
-  const pTFlbl=MODE_CONFIG[mode].labels[1];
-
-  let tsVal,tsDesc,tsLockMsg;
-  if(atTP3Ts){
-    // At TP3: trail tight, 0.5x ATR or TP2 whichever is higher (structure HL if higher still)
-    tsVal=Math.max(+(p-z.atr*0.5).toPrecision(6),z.t2,structHL&&structHL<p?structHL:0);
-    tsDesc='Tight trail at TP3 — 0.5× ATR from '+fmtP(p);
-    tsLockMsg='Final 20% runner — stop above TP2 to lock in entire gain stack';
-  }else if(atTP2Ts){
-    // At TP2: trail behind TP1, 0.8x ATR, or the primary-TF higher low — whichever is highest below price
-    tsVal=Math.max(+(p-z.atr*0.8).toPrecision(6),z.t1,structHL&&structHL<p?structHL:0);
-    tsDesc=(structHL&&structHL<p&&structHL>=z.t1)
-      ?'Structure trail — exit on '+pTFlbl+' close below higher low '+fmtP(structHL)
-      :'Trail after TP2 — stop above TP1 '+fmtP(z.t1);
-    tsLockMsg='Scaled 80% off · Final 20% trails to TP3 '+fmtP(z.t3)+' or '+fmtP(tsVal)+' stop';
-  }else if(atTP1Ts){
-    // At TP1: breakeven floor, 1.0x ATR, or the primary-TF higher low — structure wins when it is higher
-    tsVal=Math.max(+(p-z.atr*1.0).toPrecision(6),z.sweet,structHL&&structHL<p?structHL:0);
-    tsDesc=(structHL&&structHL<p&&structHL>z.sweet)
-      ?'Structure trail — exit on '+pTFlbl+' close below higher low '+fmtP(structHL)
-      :'Trail after TP1 — stop at breakeven '+fmtP(z.sweet);
-    tsLockMsg='Scaled 50% off · Free trade on remaining 50% to TP2 '+fmtP(z.t2);
-  }else if(holdingTs){
-    // Holding zone: normal ATR trail but floored at original stop
-    tsVal=Math.max(+(p-z.atr*1.2).toPrecision(6),z.stop);
-    tsDesc='Holding position — 1.2× ATR from '+fmtP(p);
-    const lockPct=z.sweet>0?((z.t1-z.sweet)/z.sweet*100).toFixed(1):'0';
-    tsLockMsg='At TP1 '+fmtP(z.t1)+' ('+lockPct+'% gain) → scale 50% and move stop to '+fmtP(z.sweet);
-  }else{
-    // Pre-entry or in zone: standard stop
-    tsVal=z.stop;
-    tsDesc='Hard stop '+(mode==='scalp'?'(1-2% below entry)':'(structural)')+' from '+fmtP(z.sweet);
-    tsLockMsg='Pre-entry · If entry triggers at '+fmtP(z.sweet)+' → scale at TP1 '+fmtP(z.t1);
-  }
-  document.getElementById('tsLvl').textContent=fmtP(tsVal);
-  document.getElementById('tsDesc').textContent=tsDesc;
-  document.getElementById('tsLock').innerHTML=tsLockMsg;
-  // Update panel title based on stage
-  const tsTitle=atTP3Ts?'TP3 TRAIL (FINAL RUNNER)':atTP2Ts?'TP2 TRAIL':atTP1Ts?'TP1 TRAIL (BREAKEVEN)':holdingTs?(mode==='scalp'?'SCALP TRAIL':'SWING TRAIL'):'HARD STOP';
-  const titleEl=document.getElementById('tsPanelTitle');
-  if(titleEl)titleEl.textContent=tsTitle;
-}
-
-/* ===== v8d/v8e FUNDING + OPEN INTEREST — crowded-leverage detector =====
-   Non-blocking; fires for the selected coin from updateBanner. FAILS LOUD:
-   the note shows "unavailable" instead of silently rendering nothing (debt item #2). */
-let __fundReqSym=null;
-/* ===== v9 POSITIONING MODULE =====
-   Upgrade of the v8e snapshot crowded-leverage check. Snapshot funding lies (one print
-   can be a fluke); a 3-day funding TREND plus a 7-day OI SLOPE is positioning.
-   States: CROWDED_LONG | CROWDED_SHORT | DELEVERAGED | NEUTRAL.
-   Feeds: (a) the banner note, (b) a chase-guard cap in computeScore via __posState. */
-let __posState={};   // sym → {state,fundMean,oiSlope,t} — read by computeScore, fails safe to undefined
-/* ===== v9.3 ETHBTC REGIME (display-only) =====
-   "Is this an ETH move or a crypto move?" — ETHBTC vs its own EMA50 + slope.
-   Daily data: refresh at most every 30 min, piggybacking loadAll. Fails safe to null. */
-let __ethbtc=null; // {state,pctVsEma,slope10,t}
-async function refreshEthBtc(){
-  try{
-    if(__ethbtc&&Date.now()-__ethbtc.t<1800000)return; // 30-min staleness guard
-    const raw=await fetchKlines('ETHBTC','1d',80);
-    const cs=raw.closes;if(!cs||cs.length<55)return;
-    const m=2/51;let e=cs[0];const es=[e];
-    for(let i=1;i<cs.length;i++){e=cs[i]*m+e*(1-m);es.push(e)}
-    const last=cs[cs.length-1],ema=es[es.length-1];
-    const pct=(last-ema)/ema*100;
-    const slope=(es[es.length-1]-es[es.length-11])/es[es.length-11]*100; // EMA50 10d slope
-    const state=pct>0&&slope>0?'ETH LEADING':pct<0&&slope<0?'ETH LAGGING':'MIXED';
-    __ethbtc={state,pctVsEma:pct,slope10:slope,t:Date.now()};
-  }catch(e){/* fail safe — row simply doesn't render */}
-}
-/* ===== v9.3 LIQUIDATION SHELF ESTIMATOR (display-only, leverage model) =====
-   NOT exchange heatmap data (that needs a paid aggregator API). Model: perp entries cluster
-   at volume-weighted price nodes; long liqs project BELOW entries at ~1/lev distances
-   (50x ~1.9%, 25x ~3.8%, 10x ~9.5%), short liqs ABOVE. Recency-decayed volume weighting.
-   Strongest density bin below spot = long-liq shelf (support magnet / cascade risk);
-   strongest above = short-liq fuel (squeeze target). Aug '26: shelf $1,821 marked the bottom,
-   fuel >$1,997 powered the squeeze — this estimates that map from candles alone. */
-function v93LiqShelves(closes,vols,price,atr){
-  if(!closes||!vols||closes.length<40||!(atr>0))return null;
-  const N=Math.min(closes.length,120);
-  const cs=closes.slice(-N),vs=vols.slice(-N);
-  const TIERS=[[0.019,0.45],[0.038,0.35],[0.095,0.20]]; // [distance, weight] ≈ 50x/25x/10x
-  const bin=atr*0.25;if(!(bin>0))return null;
-  const density={}; // liq-price bin -> {long:w, short:w}
-  for(let i=0;i<cs.length;i++){
-    const w=vs[i]*Math.pow(0.5,(cs.length-1-i)/60); // recency half-life 60 bars
-    if(!(w>0))continue;
-    for(const[dist,tw]of TIERS){
-      const lq=Math.round(cs[i]*(1-dist)/bin), sq=Math.round(cs[i]*(1+dist)/bin);
-      (density[lq]=density[lq]||{long:0,short:0}).long+=w*tw;
-      (density[sq]=density[sq]||{long:0,short:0}).short+=w*tw;
-    }
-  }
-  let longShelf=null,shortBand=null,maxL=0,maxS=0,totL=0,totS=0;
-  for(const k in density){
-    const px=k*bin,d=density[k];
-    if(px<price){totL+=d.long;if(d.long>maxL){maxL=d.long;longShelf=px}}
-    if(px>price){totS+=d.short;if(d.short>maxS){maxS=d.short;shortBand=px}}
-  }
-  if(longShelf===null&&shortBand===null)return null;
-  return{longShelf,shortBand,
-    longStr:totL>0?maxL/totL:0,shortStr:totS>0?maxS/totS:0}; // strength = share of side's density
-}
-async function fetchPositioning(symbol){
-  const P=V8E_PARAMS.positioning;
-  const [fh,oi,prem]=await Promise.all([
-    fetch('/api/futures?type=funding-hist&symbol='+symbol+'&limit='+P.fundingBars).then(r=>r.ok?r.json():Promise.reject(new Error('funding-hist HTTP '+r.status))),
-    fetch('/api/futures?type=oi&symbol='+symbol+'&period=1d&limit='+P.oiDays).then(r=>r.ok?r.json():Promise.reject(new Error('oi HTTP '+r.status))),
-    fetch('/api/futures?type=premium&symbol='+symbol).then(r=>r.ok?r.json():null).catch(()=>null) // current print, display only
-  ]);
-  if(!Array.isArray(fh)||!fh.length)throw new Error('funding-hist: bad payload');
-  const fundMean=fh.reduce((a,r)=>a+(+r.fundingRate||0),0)/fh.length;
-  let oiSlope=null;
-  if(Array.isArray(oi)&&oi.length>=2){
-    const first=parseFloat(oi[0].sumOpenInterest),last=parseFloat(oi[oi.length-1].sumOpenInterest);
-    if(first>0)oiSlope=(last/first-1)*100;
-  }
-  const fundNow=prem?parseFloat(prem.lastFundingRate):NaN;
-  let state='NEUTRAL';
-  if(oiSlope!==null&&oiSlope<=P.oiSlopeDelev)state='DELEVERAGED';
-  if(fundMean>P.fundingHot&&oiSlope!==null&&oiSlope>=P.oiSlopeHot)state='CROWDED_LONG';
-  else if(fundMean<-P.fundingHot&&oiSlope!==null&&oiSlope>=0)state='CROWDED_SHORT';
-  return{state,fundMean,oiSlope,fundNow,t:Date.now()};
-}
-function loadFundingFor(sym){
-  const el=document.getElementById('fundNote');if(!el)return;
-  __fundReqSym=sym;
-  el.style.color='var(--txt4)';el.textContent='Positioning: loading…';
-  fetchPositioning(sym).then(pos=>{
-    if(__fundReqSym!==sym)return; // stale response — user switched coins
-    __posState[sym]=pos;
-    const fm=(pos.fundMean*100).toFixed(3)+'%/8h 3d-mean';
-    const oiTxt=pos.oiSlope===null?'OI 7d n/a':'OI '+(pos.oiSlope>=0?'+':'')+pos.oiSlope.toFixed(1)+'% 7d';
-    if(pos.state==='CROWDED_LONG'){
-      el.style.color='var(--rose)';
-      el.textContent='⚠ CROWDED LONGS — funding '+fm+' · '+oiTxt+' → flush risk, chase-guard active';
-    }else if(pos.state==='CROWDED_SHORT'){
-      el.style.color='var(--em)';
-      el.textContent='⚡ CROWDED SHORTS — funding '+fm+' · '+oiTxt+' → squeeze fuel building';
-    }else if(pos.state==='DELEVERAGED'){
-      el.style.color='var(--em)';
-      el.textContent='◎ DELEVERAGED — funding '+fm+' · '+oiTxt+' — washed positioning, healthiest tape for entries';
-    }else{
-      el.style.color='var(--txt4)';
-      el.textContent='Positioning neutral — funding '+fm+' · '+oiTxt;
-    }
-    updatePanels(); // re-render: the chase-guard cap may now apply
-  }).catch(e=>{
-    if(__fundReqSym!==sym)return;
-    delete __posState[sym]; // fail SAFE: no data = no cap, and say so
-    el.style.color='var(--amber)';
-    el.textContent='Positioning: unavailable ('+(e&&e.message?e.message:'proxy error')+') — check /api/futures';
-  });
-}
-
-/* ===== v9 FLOW MODULE =====
-   Spot-ETF daily net flows via /api/etf (Farside). The one input in the stack that is
-   NOT a transform of price. Classified into:
-   STRONG_IN | IN | FLAT | OUT | STRONG_OUT | STALE (source down / data too old).
-   Wiring is layered-veto, not score-blend: STRONG_OUT caps score (veto notch);
-   STRONG_IN lifts ONLY the v8d volume-demotion (a documented un-veto). ETH/BTC only —
-   other coins get flow=null and are untouched. */
-let __etfFlow={};    // 'ETH'/'BTC' → {state,sum5,sum20,lastDate,ageDays,t}
-function v9ClassifyFlow(days,short){
-  const P=V8E_PARAMS.flow;
-  const scale=P.scale[short];if(!scale)return null;
-  if(!days||days.length<5)return{state:'STALE',sum5:null,sum20:null,lastDate:null,ageDays:null};
-  const last=days[days.length-1];
-  const ageDays=Math.floor((Date.now()-new Date(last.date+'T00:00:00Z').getTime())/86400000);
-  const last5=days.slice(-5),last20=days.slice(-20);
-  const sum5=+last5.reduce((a,d)=>a+d.total,0).toFixed(1);
-  const sum20=+last20.reduce((a,d)=>a+d.total,0).toFixed(1);
-  const posRatio=last5.filter(d=>d.total>0).length/last5.length;
-  let state='FLAT';
-  if(ageDays>P.maxAgeDays)state='STALE';
-  else if(sum5>=scale.strong&&posRatio>=P.posDayRatio)state='STRONG_IN';
-  else if(sum5<=-scale.strong&&(1-posRatio)>=P.posDayRatio)state='STRONG_OUT';
-  else if(sum5>=scale.weak)state='IN';
-  else if(sum5<=-scale.weak)state='OUT';
-  return{state,sum5,sum20,lastDate:last.date,ageDays};
-}
-async function refreshEtfFlows(){
-  for(const short of ['ETH','BTC']){
-    try{
-      const r=await fetch('/api/etf?symbol='+short);
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      const j=await r.json();
-      __etfFlow[short]={...v9ClassifyFlow(j.days,short),t:Date.now()};
-    }catch(e){
-      __etfFlow[short]={state:'STALE',sum5:null,sum20:null,lastDate:null,ageDays:null,t:Date.now(),err:(e&&e.message)||'fetch failed'};
-    }
-  }
-  updateFlowNote();updatePanels();
-}
-function flowFor(short){return __etfFlow[short]||null}
-function updateFlowNote(){
-  const el=document.getElementById('flowNote');if(!el)return;
-  const sym=allData[selSym]?allData[selSym].coin.short:selSym.replace(/USDT$/,'');
-  const f=flowFor(sym);
-  if(!f){el.style.color='var(--txt4)';el.textContent='ETF flows: n/a for '+sym;return}
-  if(f.state==='STALE'){
-    el.style.color='var(--amber)';
-    el.textContent='⚠ ETF FLOW SOURCE '+(f.err?'DOWN ('+f.err+')':'STALE — last row '+f.lastDate)+' — flow gates inactive';
-    return;
-  }
-  const s5=(f.sum5>=0?'+':'')+f.sum5+'M 5d',s20=(f.sum20>=0?'+':'')+f.sum20+'M 20d';
-  if(f.state==='STRONG_IN'){el.style.color='var(--em)';el.textContent='◈ ETF STRONG INFLOWS — '+s5+' · '+s20+' — institutional bid confirmed';}
-  else if(f.state==='STRONG_OUT'){el.style.color='var(--rose)';el.textContent='◈ ETF STRONG OUTFLOWS — '+s5+' · '+s20+' — flow veto active, no full-size longs';}
-  else if(f.state==='IN'){el.style.color='var(--em)';el.textContent='◈ ETF inflows — '+s5+' · '+s20;}
-  else if(f.state==='OUT'){el.style.color='var(--amber)';el.textContent='◈ ETF outflows — '+s5+' · '+s20;}
-  else{el.style.color='var(--txt4)';el.textContent='◈ ETF flows flat — '+s5+' · '+s20;}
-}
-
-/* ===== SIGNAL CARD (MetaSignals style) ===== */
-function updateSignalCard(){
-  const d=allData[selSym];if(!d)return;
-  const sc=computeScore(d);
-  const z=calcZones(d);
-  const p=d.price;
-  const card=document.getElementById('sigCard');
-  const bTFs=sc.buyTFs||0,sTFs=sc.sellTFs||0;
-  const inZ=p>=z.buyLo&&p<=z.buyHi,belZ=p<z.buyLo,atSell=p>=z.sellLo;
-
-  // Stage detection for signal card
-  const sigTP1=p>=z.t1&&p<z.t2;
-  const sigTP2=p>=z.t2&&p<z.t3;
-  const sigTP3=p>=z.t3;
-  const sigHolding=p>z.buyHi&&p<z.t1;
-
-  // Determine card type — never show "short", always frame as exit from long
-  let type='neutral',typeLabel='NO ACTIVE SIGNAL',subLabel='';
-  if(sigTP3){
-    type='exit';typeLabel='AT TP3 — EXIT FINAL 20%';subLabel='Exit remaining or trail tight to catch extension';
-  }else if(sigTP2){
-    type='exit';typeLabel='AT TP2 — SCALE OUT 30%';subLabel='Take another 30% off · trail runner to TP3';
-  }else if(sigTP1){
-    type='exit';typeLabel='AT TP1 — SCALE OUT 50%';subLabel='Take 50% profit · move stop to breakeven';
-  }else if(sigHolding&&sTFs>=2){
-    type='exit';typeLabel='SELL PRESSURE IN HOLD';subLabel='Tighten stops · '+sTFs+' of 4 TFs showing sell pressure';
-  }else if(sigHolding){
-    type='long';typeLabel='HOLDING — TRENDING TO TP1';subLabel='Let profits run to '+fmtP(z.t1);
-  }else if((inZ||belZ)&&sc.score>=60&&bTFs>=1){
-    type='long';typeLabel='POTENTIAL LONG';subLabel='Enter or add to long position';
-  }else if(bTFs>=2){
-    type='long';typeLabel='POTENTIAL LONG';subLabel=bTFs+' of 4 timeframes aligned for entry';
-  }else if(sTFs>=2||atSell){
-    type='exit';typeLabel='POTENTIAL EXIT (LONG)';subLabel='Scale out your existing long position';
-  }else if(sc.score>=55){
-    type='long';typeLabel='POTENTIAL LONG — FORMING';subLabel='Setup developing, not yet confirmed';
-  }else{
-    subLabel='Waiting for multi-timeframe alignment';
-  }
-
-  card.className='sig-card active '+type;
-  document.getElementById('sigCardType').textContent=typeLabel;
-  document.getElementById('sigCardSub').textContent=subLabel;
-  document.getElementById('sigSym').textContent=d.coin.short;
-  document.getElementById('sigPrice').textContent=fmtP(p);
-  document.getElementById('sigSL').textContent=fmtP(z.stop);
-  document.getElementById('sigScoreVal').textContent=sc.score+' / 100';
-
-  // Dominant timeframe - use mode-aware labels
-  const L=MODE_CONFIG[mode].labels;
-  const domTF=bTFs>=2?'Multi-TF ('+bTFs+')':sTFs>=2?'Multi-TF ('+sTFs+' sell)':d.h12&&d.h12.stoch&&d.h12.stoch.k<35?L[2]:L[1];
-  document.getElementById('sigTF').textContent=domTF;
-
-  // Targets — stage-aware labels showing progress
-  const risk=z.sweet-z.stop;
-  let tpData;
-  if(sigTP3){
-    tpData=[
-      {label:'TP1 ✓ DONE',price:z.t1,rr:'HIT'},
-      {label:'TP2 ✓ DONE',price:z.t2,rr:'HIT'},
-      {label:'EXIT / TRAIL',price:z.t3,rr:risk>0?((z.t3-z.sweet)/risk).toFixed(1)+':1':0}
-    ];
-  }else if(sigTP2){
-    tpData=[
-      {label:'TP1 ✓ DONE',price:z.t1,rr:'HIT'},
-      {label:'SCALE 30% NOW',price:z.t2,rr:risk>0?((z.t2-z.sweet)/risk).toFixed(1)+':1':0},
-      {label:'TRAIL TO',price:z.t3,rr:risk>0?((z.t3-z.sweet)/risk).toFixed(1)+':1':0}
-    ];
-  }else if(sigTP1){
-    tpData=[
-      {label:'SCALE 50% NOW',price:z.t1,rr:risk>0?((z.t1-z.sweet)/risk).toFixed(1)+':1':0},
-      {label:'NEXT: SCALE 30%',price:z.t2,rr:risk>0?((z.t2-z.sweet)/risk).toFixed(1)+':1':0},
-      {label:'FINAL TARGET',price:z.t3,rr:risk>0?((z.t3-z.sweet)/risk).toFixed(1)+':1':0}
-    ];
-  }else if(type==='exit'){
-    tpData=[
-      {label:'SCALE OUT 50%',price:z.t1,rr:risk>0?((z.t1-z.sweet)/risk).toFixed(1):0},
-      {label:'SCALE OUT 30%',price:z.t2,rr:risk>0?((z.t2-z.sweet)/risk).toFixed(1):0},
-      {label:'TRAIL FINAL 20%',price:z.t3,rr:risk>0?((z.t3-z.sweet)/risk).toFixed(1):0}
-    ];
-  }else{
-    tpData=[
-      {label:'TARGET 1',price:z.t1,rr:risk>0?((z.t1-z.sweet)/risk).toFixed(1):0},
-      {label:'TARGET 2',price:z.t2,rr:risk>0?((z.t2-z.sweet)/risk).toFixed(1):0},
-      {label:'TARGET 3',price:z.t3,rr:risk>0?((z.t3-z.sweet)/risk).toFixed(1):0}
-    ];
-  }
-  // v9.1: mark consumed ladder targets as HIT and surface ATR-extension targets
-  if(z.hits){
-    tpData=tpData.map(function(t,i){return z.hits[i]?Object.assign({},t,{rr:'HIT'}):t});
-    if(z.next){
-      z.next.filter(function(n){return n.ext}).slice(0,2).forEach(function(n,k){
-        tpData.push({label:'EXT '+(k+1)+' ⤴',price:n.price,rr:risk>0?((n.price-z.sweet)/risk).toFixed(1):'—'});
-      });
-    }
-  }
-  document.getElementById('sigTargets').innerHTML=tpData.map(t=>
-    `<div class="sig-tp"><span class="tp-label">${t.label}</span><div><span class="tp-price">${fmtP(t.price)}</span><span class="tp-rr">${typeof t.rr==='string'&&t.rr==='HIT'?'✓':'RR '+t.rr}${typeof t.rr==='string'&&t.rr.includes(':')?'':typeof t.rr==='string'&&t.rr==='HIT'?'':':1'}</span></div></div>`
-  ).join('');
-
-  // Stats table — show for both long and exit cards
-  const statsData=[
-    {tp:z.hits&&z.hits[0]?'TP1 ✓':'TP1',wr:Math.min(94,72+bTFs*5+sc.score*.1).toFixed(0),pf:(1.2+bTFs*.3).toFixed(1),risk:fmtP(risk),tgt:(z.hits&&z.hits[0]?'✓ ':'')+fmtP(z.t1)},
-    {tp:z.hits&&z.hits[1]?'TP2 ✓':'TP2',wr:Math.min(82,55+bTFs*4+sc.score*.08).toFixed(0),pf:(1.0+bTFs*.25).toFixed(1),risk:fmtP(risk),tgt:(z.hits&&z.hits[1]?'✓ ':'')+fmtP(z.t2)},
-    {tp:z.hits&&z.hits[2]?'TP3 ✓':'TP3',wr:Math.min(68,38+bTFs*3+sc.score*.06).toFixed(0),pf:(0.8+bTFs*.2).toFixed(1),risk:fmtP(risk),tgt:(z.hits&&z.hits[2]?'✓ ':'')+fmtP(z.t3)}
-  ];
-  // v9.1: append live extension targets when the ladder is fully/partly consumed
-  if(z.next){
-    z.next.filter(function(n){return n.ext}).slice(0,2).forEach(function(n,k){
-      statsData.push({tp:'EXT'+(k+1)+' ⤴',wr:'—',pf:'—',risk:fmtP(risk),tgt:fmtP(n.price)});
-    });
-  }
-  document.getElementById('sigStatsBody').innerHTML=statsData.map(r=>
-    `<tr><td>${r.tp}</td><td style="text-align:center">${r.wr}%</td><td style="text-align:center">${r.pf}</td><td style="text-align:center">${r.risk}</td><td style="text-align:right">${r.tgt}</td></tr>`
-  ).join('');
-}
-
-function updateBanner(sym){
-  selSym=sym;
-  const d=allData[sym];if(!d)return;
-  const sc=computeScore(d);
-
-  document.getElementById('hP').textContent=fmtP(d.price);
-  document.getElementById('hName').textContent=d.coin.name+' ('+d.coin.short+')';
-  const ch=d.ch;
-  const chEl=document.getElementById('hCh');
-  chEl.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'%';
-  chEl.className='badge '+(ch>=0?'badge-up':'badge-dn');
-  document.getElementById('hStoch1').textContent=d.h1&&d.h1.stoch?d.h1.stoch.k.toFixed(0)+'/'+d.h1.stoch.d.toFixed(0):'—';
-  document.getElementById('hRsi4').textContent=d.h4.rsi!==null?d.h4.rsi.toFixed(1):'—';
-  document.getElementById('hStoch12').textContent=d.h12&&d.h12.stoch?d.h12.stoch.k.toFixed(0)+'/'+d.h12.stoch.d.toFixed(0):'—';
-  document.getElementById('hRsi1d').textContent=d.d1&&d.d1.rsi!==null?d.d1.rsi.toFixed(1):'—';
-  document.getElementById('hTime').textContent=new Date().toLocaleTimeString();
-
-  // Score
-  document.getElementById('hScore').textContent=sc.score;
-  document.getElementById('hScore').style.color=sc.sigColor;
-  document.getElementById('hSigLbl').textContent=sc.signal;
-  document.getElementById('hSigLbl').style.color=sc.sigColor;
-  // v8: append regime + knife badge to the signal label
-  (function(){
-    const lbl=document.getElementById('hSigLbl');
-    if(sc.regime){
-      const rc=sc.regime==='BULL'?'var(--em)':sc.regime==='BEAR'?'var(--rose)':'var(--amber)';
-      let extra=' · <span style="font-family:var(--mono);font-size:11px;color:'+rc+'">'+sc.regime+'</span>';
-      if(sc.knife)extra+=' <span style="font-family:var(--mono);font-size:11px;color:var(--rose)">🔪 KNIFE</span>';
-      lbl.innerHTML=sc.signal+extra;
-    }
-  })();
-
-  // Trade Status Banner — scale-out aware
-  const tb=document.getElementById('hTradeBanner');
-  const z=calcZones(d);
-  const p=d.price;
-  const inZ=p>=z.buyLo&&p<=z.buyHi;
-  const belZ=p<z.buyLo;
-  const holding=p>z.buyHi&&p<z.t1;      // between buy zone and TP1
-  const atTP1=p>=z.t1&&p<z.t2;          // TP1 zone - scale 50%
-  const atTP2=p>=z.t2&&p<z.t3;          // TP2 zone - scale 30%
-  const atTP3=p>=z.t3;                  // TP3 zone - exit or trail final 20%
-  const abvZ=p>z.buyHi&&p<z.sellLo;     // legacy "above buy zone, below sell"
-  const atSell=p>=z.sellLo;
-  const pctFromZone=p>z.buyHi?((p-z.buyHi)/p*100).toFixed(1):0;
-  const bTFs=sc.buyTFs||0;
-  const sTFs=sc.sellTFs||0;
-  const stoch12=d.h12&&d.h12.stoch?d.h12.stoch.k:50;
-  const rsi4=d.h4.rsi||50;
-
-  // Trailing stop levels for scale-out
-  const trailAfterTP1=z.sweet; // move stop to entry (breakeven) after TP1
-  const trailAfterTP2=z.t1;    // move stop to TP1 after TP2
-  const trailAfterTP3=z.t2;    // move stop to TP2 for final runner
-
-  if(atTP3&&sTFs>=2){
-    tb.className='ts-banner sell';tb.textContent='🔴 AT TP3 — EXIT FINAL 20% NOW';
-  }else if(atTP3){
-    tb.className='ts-banner sell';tb.textContent='🔴 TP3 HIT — EXIT OR TRAIL TIGHT';
-  }else if(atTP2&&sTFs>=2){
-    tb.className='ts-banner sell';tb.textContent='🟠 AT TP2 + SELL PRESSURE — SCALE OUT 30%';
-  }else if(atTP2){
-    tb.className='ts-banner sell';tb.textContent='🟠 TP2 HIT — SCALE OUT 30%, TRAIL REST';
-  }else if(atTP1&&sTFs>=2){
-    tb.className='ts-banner sell';tb.textContent='🟡 AT TP1 + SELL PRESSURE — SCALE OUT 50%';
-  }else if(atTP1){
-    tb.className='ts-banner sell';tb.textContent='🟡 TP1 HIT — SCALE OUT 50%, LET REST RUN';
-  }else if(holding&&sTFs>=3){
-    tb.className='ts-banner sell';tb.textContent='⚠ SELL PRESSURE IN HOLDING ZONE — SCALE OUT EARLY';
-  }else if(holding&&sTFs>=2){
-    tb.className='ts-banner wait';tb.textContent='⚠ HOLDING — tighten stops, sell pressure on 2 TFs';
-  }else if(holding&&bTFs>=2){
-    tb.className='ts-banner buy';tb.textContent='🟢 HOLD — trending to TP1 at '+fmtP(z.t1);
-  }else if(holding){
-    const prog=((p-z.buyHi)/(z.t1-z.buyHi)*100).toFixed(0);
-    tb.className='ts-banner buy';tb.textContent='🟢 HOLD — '+prog+'% of way to TP1 '+fmtP(z.t1);
-  }else if((inZ||belZ)&&sc.score>=75&&bTFs>=2){
-    tb.className='ts-banner buy';tb.textContent='🟢 BOTTOM CONFIRMED — SCALE IN NOW';
-  }else if((inZ||belZ)&&sc.score>=60){
-    tb.className='ts-banner buy';tb.textContent='🟢 BUY ZONE ACTIVE — BUILDING POSITION';
-  }else if(belZ&&rsi4<35){
-    tb.className='ts-banner buy';tb.textContent='🟢 BELOW ZONE + OVERSOLD — STRONG ENTRY IF CONFIRMED';
-  }else{
-    tb.className='ts-banner wait';tb.textContent='⏳ WAITING — NO CONFIRMED SIGNAL ON '+d.coin.short;
-  }
-
-  // Next Action line — scale-out aware with specific instructions
-  const na=document.getElementById('hNextAct');
-  if(atTP3){
-    na.textContent='▶ Exit final 20% at '+fmtP(p)+' OR trail stop tight at '+fmtP(trailAfterTP3)+' to catch extension';
-  }else if(atTP2){
-    na.textContent='▶ Sell 30% now at '+fmtP(p)+' | Move stop up to '+fmtP(trailAfterTP2)+' | Next target TP3 '+fmtP(z.t3);
-  }else if(atTP1){
-    na.textContent='▶ Sell 50% now at '+fmtP(p)+' | Move stop to breakeven '+fmtP(trailAfterTP1)+' | Next TP2 '+fmtP(z.t2);
-  }else if(holding&&sTFs>=2){
-    na.textContent='▶ Holding at '+fmtP(p)+' — tighten stop to '+fmtP(z.sweet)+' | Watch for TP1 '+fmtP(z.t1);
-  }else if(holding){
-    const toTP1=((z.t1-p)/p*100).toFixed(1);
-    na.textContent='▶ Hold at '+fmtP(p)+' — '+toTP1+'% to TP1 '+fmtP(z.t1)+' | Stop: '+fmtP(z.stop);
-  }else if((inZ||belZ)&&sc.score>=75&&bTFs>=2){
-    na.textContent='▶ Scale in 50% at '+fmtP(p)+' | Add at '+fmtP(z.sweet)+' | Stop: '+fmtP(z.stop);
-  }else if((inZ||belZ)&&sc.score>=60){
-    na.textContent='▶ Partial entry at '+fmtP(p)+' | Full at '+fmtP(z.sweet)+' | Stop: '+fmtP(z.stop);
-  }else if(belZ){
-    na.textContent='▶ Below zone at '+fmtP(p)+' | Wait for bounce or enter small | Stop: '+fmtP(z.stop);
-  }else{
-    na.textContent='▶ No action on '+d.coin.short+' — monitoring '+MODE_CONFIG[mode].labels.join('/')+' for signal';
-  }
-
-  // Indicators
-  document.getElementById('indSrc').textContent='BINANCE '+MODE_CONFIG[mode].labels.join(' + ')+' · REAL OHLCV · '+d.coin.short;
-  document.getElementById('indGrid').innerHTML=sc.indicators.map(ind=>{
-    const cls=ind.bull?'bull':ind.bear?'bear':'neu';
-    const barCol=ind.bull?'var(--em)':ind.bear?'var(--rose)':'var(--amber)';
-    return`<div class="ii">
-      <div class="ii-tf">${ind.tf}</div>
-      <div class="ii-name">${ind.name}</div>
-      <div class="ii-val ${cls}">${ind.val}</div>
-      <div class="ii-bar"><div class="ii-bf" style="width:${ind.score}%;background:${barCol}"></div></div>
-      ${ind.sub?'<div class="ii-sub">'+ind.sub+'</div>':''}
-    </div>`
-  }).join('');
-
-  // Highlight table row
-  document.querySelectorAll('tr.sel').forEach(r=>r.classList.remove('sel'));
-  const row=document.querySelector(`tr[data-s="${sym}"]`);if(row)row.classList.add('sel');
-
-  // Update trade management panels with this coin's zones
-  document.getElementById('szE').value=Math.round(z.sweet*100)/100;
-  document.getElementById('szS').value=Math.round(z.stop*100)/100;
-  updatePanels();
-  updateSignalCard();
-  loadFundingFor(sym); // v8d: non-blocking funding/OI note for the selected coin
-  updateFlowNote();    // v9: flow badge for the selected coin (ETH/BTC; others show n/a)
-}
-
-let sortCol='score',sortAsc=false;
-
-function doSort(col){
-  if(sortCol===col){sortAsc=!sortAsc}else{sortCol=col;sortAsc=col==='name'}
-  document.querySelectorAll('th[data-col]').forEach(th=>{
-    const isSorted=th.dataset.col===col;
-    th.classList.toggle('sorted',isSorted);
-    const arrow=th.querySelector('.sa');
-    if(arrow&&isSorted)arrow.textContent=sortAsc?'▲':'▼';
-  });
-  renderTable();
-}
-
-function getSortVal(e,col){
-  switch(col){
-    case'name':return e.coin.name.toLowerCase();
-    case'price':return e.price;
-    case'ch':return e.ch;
-    case'stoch1':return e.h1&&e.h1.stoch?e.h1.stoch.k:0;
-    case'rsi4':return e.h4.rsi||0;
-    case'stoch4':return e.h4.stoch?e.h4.stoch.k:0;
-    case'stoch12':return e.h12&&e.h12.stoch?e.h12.stoch.k:0;
-    case'rsi1d':return e.d1&&e.d1.rsi?e.d1.rsi:0;
-    case'rs':return typeof e.__rs==='number'?e.__rs:-9999;
-    case'score':default:return e.score;
-  }
-}
-
-function buildExplanation(e){
-  const parts=[];
-  const L=MODE_CONFIG[mode].labels; // mode-aware labels
-  const tfs=[
-    {key:'h1',label:L[0],data:e.h1},
-    {key:'h4',label:L[1],data:e.h4},
-    {key:'h12',label:L[2],data:e.h12},
-    {key:'d1',label:L[3],data:e.d1}
-  ];
-  for(const tf of tfs){
-    const d=tf.data;if(!d)continue;
-    const L=tf.label;
-    // RSI
-    if(d.rsi!==null&&d.rsi!==undefined){
-      if(d.rsi<30)parts.push({icon:'●',color:'var(--em)',text:L+' RSI at '+d.rsi.toFixed(1)+' — deeply oversold, strong bounce probability'});
-      else if(d.rsi<40)parts.push({icon:'●',color:'var(--em)',text:L+' RSI at '+d.rsi.toFixed(1)+' — low, room for upside'});
-      else if(d.rsi>70)parts.push({icon:'●',color:'var(--rose)',text:L+' RSI at '+d.rsi.toFixed(1)+' — overbought, reversal risk'});
-      else parts.push({icon:'○',color:'var(--txt3)',text:L+' RSI at '+d.rsi.toFixed(1)+' — neutral'});
-    }
-    // Stoch RSI
-    if(d.stoch){
-      const k=d.stoch.k,dd=d.stoch.d;
-      if(k<25)parts.push({icon:'●',color:'var(--em)',text:L+' Stoch RSI K='+k.toFixed(1)+' D='+dd.toFixed(1)+' — oversold, historically strong buy zone'});
-      else if(k<35&&k>dd)parts.push({icon:'●',color:'var(--em)',text:L+' Stoch RSI K='+k.toFixed(1)+' crossing above D='+dd.toFixed(1)+' — bullish crossover'});
-      else if(k>75)parts.push({icon:'●',color:'var(--rose)',text:L+' Stoch RSI K='+k.toFixed(1)+' — overbought, watch for rollover'});
-      else parts.push({icon:'○',color:'var(--txt3)',text:L+' Stoch RSI K='+k.toFixed(1)+'/'+dd.toFixed(1)+' — mid-range'});
-    }
-    // MACD
-    if(d.macd){
-      const m=d.macd;
-      if(m.macd<0&&m.histogram>0)parts.push({icon:'●',color:'var(--em)',text:L+' MACD ('+m.macd.toFixed(2)+') bearish but histogram positive (+'+m.histogram.toFixed(2)+') — converging, early bullish'});
-      else if(m.histogram>0&&m.macd>0)parts.push({icon:'●',color:'var(--em)',text:L+' MACD fully bullish at '+m.macd.toFixed(2)+', histogram expanding'});
-      else if(m.histogram<0&&m.macd<0)parts.push({icon:'●',color:'var(--rose)',text:L+' MACD bearish ('+m.macd.toFixed(2)+'), histogram negative ('+m.histogram.toFixed(2)+')'});
-      else parts.push({icon:'○',color:'var(--txt3)',text:L+' MACD at '+m.macd.toFixed(2)+' — mixed'});
-    }
-    // SQZMOM (only 4H and 12H)
-    if(d.sqz&&(tf.key==='h4'||tf.key==='h12')){
-      if(d.sqz.positive&&d.sqz.rising)parts.push({icon:'●',color:'var(--em)',text:L+' SQZMOM positive and expanding ('+d.sqz.value.toFixed(2)+') — strong momentum'});
-      else if(d.sqz.rising)parts.push({icon:'●',color:'var(--em)',text:L+' SQZMOM rising ('+d.sqz.value.toFixed(2)+') — momentum building'});
-      else if(!d.sqz.positive&&!d.sqz.rising)parts.push({icon:'●',color:'var(--rose)',text:L+' SQZMOM negative and contracting ('+d.sqz.value.toFixed(2)+')'});
-      else parts.push({icon:'○',color:'var(--txt3)',text:L+' SQZMOM at '+d.sqz.value.toFixed(2)+' — transitioning'});
-    }
-  }
-
-  // Add zone context at the top
-  const z=calcZones(e);
-  const p=e.price;
-  const inZone=p>=z.buyLo&&p<=z.buyHi;
-  const belowZone=p<z.buyLo;
-  const aboveZone=p>z.buyHi&&p<z.sellLo;
-  const atSell=p>=z.sellLo;
-  const pctAbove=aboveZone?((p-z.buyHi)/p*100).toFixed(1):0;
-  const stfs=e.sellTFs||0;
-  const btfs=e.buyTFs||0;
-
-  // Sell confluence warning first if active
-  if(stfs>=3)parts.unshift({icon:'🔴',color:'var(--rose)',text:'URGENT: '+stfs+' of 4 timeframes (4H, 12H, 1D) are showing overbought Stoch RSI, bearish MACD, and/or red SQZMOM. This is a multi-timeframe sell confluence — EXIT or tighten stops immediately.'});
-  else if(stfs>=2)parts.unshift({icon:'⚠',color:'var(--rose)',text:stfs+' timeframes showing sell signals (overbought + bearish momentum). Sell pressure building — consider taking profit or reducing position size.'});
-
-  // Buy confluence highlight if active
-  if(btfs>=3)parts.unshift({icon:'🟢',color:'var(--em)',text:'STRONG: '+btfs+' of 4 timeframes (1H, 4H, 12H, 1D) showing oversold Stoch RSI, bullish MACD convergence, and/or expanding SQZMOM. Multi-timeframe buy confluence confirmed'+(inZone||belowZone?' — and price is at/below the buy zone. This is a high-conviction entry.':' — but price is still above the buy zone. Wait for pullback.')});
-  else if(btfs>=2)parts.unshift({icon:'🟢',color:'var(--em)',text:btfs+' timeframes showing buy signals (oversold + bullish momentum building). '+(inZone||belowZone?'Combined with price in the buy zone, this is an actionable setup.':'Setup is forming — watch for price to enter the buy zone.')});
-
-  if(inZone)parts.unshift({icon:'★',color:'var(--em)',text:'Price is INSIDE the buy zone ('+fmtP(z.buyLo)+'–'+fmtP(z.buyHi)+'). If indicators confirm, this is an entry point.'});
-  else if(belowZone)parts.unshift({icon:'★',color:'var(--em)',text:'Price is BELOW the buy zone at '+fmtP(p)+'. Discount to target — strong entry if indicators align.'});
-  else if(atSell)parts.unshift({icon:'★',color:'var(--rose)',text:'Price is at the SELL zone ('+fmtP(z.sellLo)+'–'+fmtP(z.sellHi)+'). Take profit regardless of other indicators.'});
-  else if(aboveZone)parts.unshift({icon:'★',color:'var(--amber)',text:'Price is '+pctAbove+'% ABOVE the buy zone. Indicators may look good but entry is premature — wait for pullback to '+fmtP(z.buyHi)+' or lower.'});
-
-  let summary='';
-  if(stfs>=3)summary='CRITICAL: Multiple timeframes (4H + 12H + 1D) are simultaneously flashing sell. This is the kind of confluence that precedes significant pullbacks. Close longs, take profits, do not open new positions. Protect capital.';
-  else if(stfs>=2&&atSell)summary='Price at sell zone AND '+stfs+' timeframes showing overbought/bearish readings. Strong exit signal — take profit now.';
-  else if(stfs>=2)summary=stfs+' timeframes showing sell pressure. Even if price hasn\'t reached the sell zone yet, the indicators are warning of a top forming. Consider reducing exposure and tightening stops.';
-  else if(btfs>=3&&(inZone||belowZone))summary='PRIME ENTRY: '+btfs+' timeframes confirming buy with price at/below the buy zone. This is the multi-timeframe confluence you wait for. Enter with full position size, stop below '+fmtP(z.stop)+'.';
-  else if(btfs>=3&&aboveZone)summary=btfs+' timeframes are screaming buy but price is still '+pctAbove+'% above the zone. The indicators say YES but the price says WAIT. Do not chase — set alerts for '+fmtP(z.buyHi)+' and be ready.';
-  else if(btfs>=2&&(inZone||belowZone))summary=btfs+' timeframes confirming buy confluence with price in the zone. Solid entry — consider scaling in. Stop below '+fmtP(z.stop)+'.';
-  else if(btfs>=2&&aboveZone)summary='Buy setup forming across '+btfs+' timeframes but price hasn\'t pulled back yet. Patient — wait for '+fmtP(z.buyHi)+' before entering.';
-  else if(inZone&&e.rawScore>=70)summary='Price in buy zone with strong indicator readings. Good entry — though fewer timeframes in full confluence. Consider partial position.';
-  else if(inZone)summary='Price is in the buy zone but indicators are mixed. Consider a smaller position or wait for 12H confirmation.';
-  else if(belowZone&&e.rawScore>=70)summary='Price below the buy zone with bullish indicators — strong entry opportunity. Set stops below '+fmtP(z.stop)+'.';
-  else if(aboveZone&&e.rawScore>=70)summary='Indicators are oversold/bullish BUT price has not pulled back to the buy zone yet. The setup is forming — do NOT chase. Wait for price to reach '+fmtP(z.buyHi)+' before entering.';
-  else if(aboveZone)summary='Price above buy zone with mixed indicators. No edge here — wait for both a pullback AND indicator alignment.';
-  else if(atSell)summary='Price at sell zone. Regardless of indicator readings, this is profit-taking territory. Tighten stops or exit.';
-  else if(e.score<30)summary='Indicators and price position both unfavorable. Clear pass.';
-  else summary='Mixed signals. No strong edge — patience over action.';
-  return{parts,summary};
-}
-
-function openMo(sym){
-  const d=allData[sym];if(!d)return;
-  const sc=computeScore(d);
-  const expl=buildExplanation({...d,...sc});
-  const sigCol=sc.sigColor;
-
-  document.getElementById('moContent').innerHTML=`
-    <div class="mo-hd">
-      <div class="mo-coin"><div><div class="n">${d.coin.name}</div><div class="s">${d.coin.short}USDT · Binance</div></div></div>
-      <button class="mo-x" onclick="closeMo()">✕</button>
-    </div>
-    <div class="mo-score">
-      <div class="mo-score-n" style="color:${sigCol}">${sc.score}</div>
-      <div class="mo-score-l" style="color:${sigCol}">${sc.signal}</div>
-    </div>
-    <div style="font-size:10px;color:var(--txt4);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Real 4H + 1D indicator breakdown</div>
-    <div class="mo-ig">${sc.indicators.map(ind=>{
-      const cls=ind.bull?'bu':ind.bear?'be':'ne';
-      const barCol=ind.bull?'var(--em)':ind.bear?'var(--rose)':'var(--amber)';
-      return`<div class="mo-ii">
-        <div class="tf">${ind.tf}</div>
-        <div class="nm">${ind.name}</div>
-        <div class="vl ${cls}">${ind.val}</div>
-        ${ind.sub?'<div class="sb">'+ind.sub+'</div>':''}
-        <div class="bar"><div class="bfill" style="width:${ind.score}%;background:${barCol}"></div></div>
-      </div>`}).join('')}</div>
-    <div class="mo-why">
-      <strong>Why "${sc.signal}" — indicator-by-indicator:</strong>
-      ${expl.parts.map(p=>`<div style="display:flex;gap:6px;align-items:flex-start;margin-top:5px"><span style="color:${p.color};flex-shrink:0;font-size:10px;margin-top:2px">${p.icon}</span><span>${p.text}</span></div>`).join('')}
-      <div class="reason"><strong style="display:inline">Bottom line:</strong> ${expl.summary}</div>
-    </div>
-    <div class="mo-ft">
-      <a href="https://www.tradingview.com/symbols/BINANCE-${d.coin.short}USDT/" target="_blank" class="btv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>TradingView</a>
-      <button class="btn btn-em btn-sm" onclick="updateBanner('${sym}');closeMo()">Select Coin</button>
-      <button class="btn btn-sm" onclick="closeMo()">Close</button>
-    </div>`;
-  document.getElementById('moOverlay').classList.add('op');
-  document.body.style.overflow='hidden';
-}
-function closeMo(){document.getElementById('moOverlay').classList.remove('op');document.body.style.overflow=''}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMo()});
-
-function renderTable(){
-  // v8d: relative strength vs BTC over the last rsBars primary-TF bars
-  const bench=allData['BTCUSDT'];
-  const benchCloses=bench?bench.__rsCloses:null;
-  const entries=COINS.map(c=>{
-    const d=allData[c.sym];
-    if(!d)return null;
-    const sc=computeScore(d);
-    const rs=benchCloses?v8RelStrength(d.__rsCloses,benchCloses):null;
-    return{...d,...sc,coin:c,__rs:rs};
-  }).filter(Boolean);
-  // Star the top 3 outperformers
-  const ranked=entries.filter(e=>typeof e.__rs==='number').sort((a,b)=>b.__rs-a.__rs).slice(0,3).map(e=>e.coin.sym);
-
-  // Sort
-  entries.sort((a,b)=>{
-    const va=getSortVal(a,sortCol),vb=getSortVal(b,sortCol);
-    if(typeof va==='string')return sortAsc?va.localeCompare(vb):vb.localeCompare(va);
-    return sortAsc?va-vb:vb-va;
-  });
-
-  document.getElementById('tb').innerHTML=entries.map(e=>{
-    const ch=e.ch;
-    const scCls=e.score>=75?'scb-h':e.score>=55?'scb-m':e.score<30?'scb-s':'scb-l';
-    const s1=e.h1&&e.h1.stoch;
-    const s4=e.h4.stoch;
-    const s12=e.h12&&e.h12.stoch;
-    const s1Cls=s1?(s1.k<30?'bull':s1.k>70?'bear':'neu'):'neu';
-    const rsi4Cls=e.h4.rsi?(e.h4.rsi<35?'bull':e.h4.rsi>70?'bear':'neu'):'neu';
-    const s4Cls=s4?(s4.k<30?'bull':s4.k>70?'bear':'neu'):'neu';
-    const s12Cls=s12?(s12.k<30?'bull':s12.k>70?'bear':'neu'):'neu';
-    const rsi1dCls=e.d1&&e.d1.rsi?(e.d1.rsi<35?'bull':e.d1.rsi>70?'bear':'neu'):'neu';
-    return`<tr data-s="${e.coin.sym}" class="${e.coin.sym===selSym?'sel':''}" onclick="updateBanner('${e.coin.sym}')">
-      <td><div class="cc"><div><div class="cn">${e.coin.name}</div><div class="cs">${e.coin.short}</div></div></div></td>
-      <td class="pc">${fmtP(e.price)}</td>
-      <td><span class="chg ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(2)}%</span></td>
-      <td><span class="ind-mini ${s1Cls}">${s1?s1.k.toFixed(0)+'/'+s1.d.toFixed(0):'—'}</span></td>
-      <td><span class="ind-mini ${rsi4Cls}">${e.h4.rsi!==null?e.h4.rsi.toFixed(1):'—'}</span></td>
-      <td><span class="ind-mini ${s4Cls}">${s4?s4.k.toFixed(0)+'/'+s4.d.toFixed(0):'—'}</span></td>
-      <td><span class="ind-mini ${s12Cls}">${s12?s12.k.toFixed(0)+'/'+s12.d.toFixed(0):'—'}</span></td>
-      <td><span class="ind-mini ${rsi1dCls}">${e.d1&&e.d1.rsi!==null?e.d1.rsi.toFixed(1):'—'}</span></td>
-      <td><span class="ind-mini ${typeof e.__rs==='number'?(e.__rs>0?'bull':e.__rs<0?'bear':'neu'):'neu'}">${typeof e.__rs==='number'?((e.__rs>0?'+':'')+e.__rs.toFixed(1)+'%'+(ranked.includes(e.coin.sym)?' ★':'')):'—'}</span></td>
-      <td><span class="scb ${scCls}">${e.score}</span></td>
-      <td><span class="sig-click" style="font-size:11px;font-weight:700;color:${e.sigColor}" onclick="event.stopPropagation();openMo('${e.coin.sym}')">${e.signal}</span></td>
-      <td><span class="conv ${e.score>=75?'conv-hi':e.score>=50?'conv-md':'conv-lo'}">${e.score>=75?'High Conviction':e.score>=50?'Medium':'Low'}</span></td>
-    </tr>`
-  }).join('');
-}
-
-/* ===== v8e SIGNAL LOG — the trade blotter. Every regime flip, knife, score-band
-   crossing and zone-stage transition is recorded. This is the raw material that
-   replaces the synthetic win-rate table with REAL hit rates. Fails safe + visible. ===== */
-let __prevSnap={};
-function v8eReadLog(){
-  try{return JSON.parse(localStorage.getItem(V8E_PARAMS.logKey)||'[]')}catch(e){return[]}
-}
-function v8eWriteLog(arr){
-  try{
-    if(arr.length>V8E_PARAMS.logMax)arr=arr.slice(arr.length-V8E_PARAMS.logMax);
-    localStorage.setItem(V8E_PARAMS.logKey,JSON.stringify(arr));
-  }catch(e){console.warn('signal log write failed',e)}
-  const lc=document.getElementById('logCount');if(lc)lc.textContent=arr.length;
-  return arr;
-}
-function v8eLogEvents(events){
-  if(!events.length)return;
-  v8eWriteLog(v8eReadLog().concat(events));
-}
-function v8eScoreBand(s){return s>=75?'75+':s>=55?'55-74':s>=30?'30-54':'<30'}
-function v8eZoneStage(p,z){
-  if(p>=z.t3)return'TP3';if(p>=z.t2)return'TP2';if(p>=z.t1)return'TP1';
-  if(p>z.buyHi)return'HOLDING';if(p>=z.buyLo)return'BUYZONE';return'BELOW';
-}
-function v8eSnapshotAndLog(){
-  const events=[];const now=new Date().toISOString();
-  for(const c of COINS){
-    const d=allData[c.sym];if(!d)continue;
-    let sc,z;
-    try{sc=computeScore(d);z=calcZones(d);}catch(e){continue}
-    const cur={regime:sc.regime,knife:!!sc.knife,band:v8eScoreBand(sc.score),stage:v8eZoneStage(d.price,z),mode};
-    const prev=__prevSnap[c.sym];
-    // v9: every event carries flow + positioning state so expectancy can slice by them
-    const fl=flowFor(c.short),pos=__posState[c.sym];
-    const base={t:now,sym:c.short,mode,price:+d.price.toPrecision(7),score:sc.score,regime:sc.regime,buyTFs:sc.buyTFs||0,sellTFs:sc.sellTFs||0,
-      flow:fl&&fl.state!=='STALE'?fl.state:null,pos:pos?pos.state:null};
-    // v9: compact structural-TF indicator snapshot (r/s/m/q booleans) — the raw material
-    // for the contribution table that decides which oscillator gets pruned. Data first, then cut.
-    const h12=d['12h']||d.h12;
-    const ind=h12?{
-      r:h12.rsi!==null&&h12.rsi<40?1:0,
-      s:h12.stoch&&(h12.stoch.k<30||(h12.stoch.k<50&&h12.stoch.k>h12.stoch.d))?1:0,
-      m:h12.macd&&h12.macd.histogram>0?1:0,
-      q:h12.sqz&&(h12.sqz.positive||h12.sqz.rising)?1:0
-    }:null;
-    if(prev&&prev.mode===mode){
-      if(prev.regime!==cur.regime)events.push({...base,event:'REGIME_FLIP',detail:prev.regime+'→'+cur.regime});
-      if(!prev.knife&&cur.knife)events.push({...base,event:'KNIFE_ON',detail:'falling-knife guard fired'});
-      if(prev.band!==cur.band&&cur.band==='75+')events.push({...base,event:'SCORE_75',detail:prev.band+'→75+'});
-      if(prev.band!==cur.band&&cur.band==='<30')events.push({...base,event:'SCORE_LOW',detail:prev.band+'→<30'});
-      if(prev.stage!==cur.stage)events.push({...base,event:'ZONE_'+cur.stage,detail:prev.stage+'→'+cur.stage,...(cur.stage==='BUYZONE'&&ind?{ind}:{})});
-    }
-    __prevSnap[c.sym]=cur;
-  }
-  v8eLogEvents(events);
-}
-/* ===== v9 EXPECTANCY ENGINE =====
-   Turns the blotter into measured edge. An EPISODE = a ZONE_BUYZONE entry, resolved by
-   the FIRST subsequent stage event for the same sym+mode:
-     → ZONE_TP1/TP2/TP3 = win at +1R/+2R/+3R (zone geometry defines R, so R is exact)
-     → ZONE_BELOW       = loss at -1R (price fell through the zone; stop sits 1 stopATR under)
-     → nothing yet      = OPEN (excluded from stats)
-   Zero new API calls — resolution uses transitions the log already captures.
-   Slices: per REGIME (the load-bearing table), per FLOW state, indicator contribution. */
-function v9BuildEpisodes(log){
-  const open={},episodes=[];
-  const R_FOR={ZONE_TP1:1,ZONE_TP2:2,ZONE_TP3:3};
-  for(const e of log){
-    const key=e.sym+'|'+e.mode;
-    if(e.event==='ZONE_BUYZONE'){
-      open[key]={entry:e,t:e.t};continue;
-    }
-    if(!open[key])continue;
-    if(R_FOR[e.event]!==undefined){
-      episodes.push({entry:open[key].entry,exit:e,r:R_FOR[e.event],win:true});delete open[key];
-    }else if(e.event==='ZONE_BELOW'){
-      episodes.push({entry:open[key].entry,exit:e,r:-1,win:false});delete open[key];
-    }
-    // ZONE_HOLDING and non-zone events don't resolve an episode
-  }
-  return{episodes,openCount:Object.keys(open).length};
-}
-function v9Stats(eps){
-  const n=eps.length;if(!n)return null;
-  const wins=eps.filter(e=>e.win),losses=eps.filter(e=>!e.win);
-  const hit=wins.length/n;
-  const avgWin=wins.length?wins.reduce((a,e)=>a+e.r,0)/wins.length:0;
-  const avgLoss=losses.length?Math.abs(losses.reduce((a,e)=>a+e.r,0)/losses.length):0;
-  const expectancy=hit*avgWin-(1-hit)*avgLoss;
-  const grossW=wins.reduce((a,e)=>a+e.r,0),grossL=Math.abs(losses.reduce((a,e)=>a+e.r,0));
-  const pf=grossL>0?grossW/grossL:(grossW>0?Infinity:0);
-  return{n,hit,avgWin,avgLoss,expectancy,pf};
-}
-function v9GroupStats(eps,keyFn){
-  const groups={};
-  for(const e of eps){const k=keyFn(e)||'—';(groups[k]=groups[k]||[]).push(e)}
-  return Object.entries(groups).map(([k,v])=>({key:k,...v9Stats(v)})).sort((a,b)=>b.n-a.n);
-}
-/* Contribution: for each indicator flag captured at entry, expectancy WITH flag on vs off.
-   The oscillator whose on/off split shows no expectancy separation at n≥minContribN is the
-   redundancy candidate — that's the pruning decision, made by data, not by taste. */
-function v9Contribution(eps){
-  const withInd=eps.filter(e=>e.entry.ind);
-  const names={r:'RSI<40',s:'StochRSI os/curl',m:'MACD hist>0',q:'SQZMOM pos/rising'};
-  return Object.keys(names).map(k=>{
-    const on=v9Stats(withInd.filter(e=>e.entry.ind[k]===1));
-    const off=v9Stats(withInd.filter(e=>e.entry.ind[k]===0));
-    return{key:k,name:names[k],on,off,n:withInd.length,
-      sep:(on&&off)?on.expectancy-off.expectancy:null};
-  });
-}
-function v9FmtStats(s){
-  if(!s)return'<td colspan="5" style="color:var(--txt4)">—</td>';
-  const pf=s.pf===Infinity?'∞':s.pf.toFixed(2);
-  const eCol=s.expectancy>0?'var(--em)':s.expectancy<0?'var(--rose)':'var(--txt3)';
-  return'<td style="text-align:center">'+s.n+'</td><td style="text-align:center">'+(s.hit*100).toFixed(0)+'%</td>'+
-    '<td style="text-align:center">+'+s.avgWin.toFixed(2)+'R / -'+s.avgLoss.toFixed(2)+'R</td>'+
-    '<td style="text-align:center;color:'+eCol+';font-weight:700">'+(s.expectancy>=0?'+':'')+s.expectancy.toFixed(2)+'R</td>'+
-    '<td style="text-align:center">'+pf+'</td>';
-}
-function openExpectancyMo(){
-  const P=V8E_PARAMS.expectancy;
-  const log=v8eReadLog();
-  const{episodes,openCount}=v9BuildEpisodes(log);
-  const head='<tr><th style="text-align:left">Slice</th><th>N</th><th>Hit</th><th>Avg W/L</th><th>Expectancy</th><th>PF</th></tr>';
-  let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-    '<div style="font-weight:700">Expectancy <span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">'+
-    episodes.length+' closed · '+openCount+' open · from the live blotter, not backtest</span></div>'+
-    '<button class="btn btn-sm" onclick="closeMo()">✕</button></div>';
-  if(episodes.length<P.minEpisodes){
-    html+='<div style="color:var(--txt3);font-size:12px;padding:16px 0">Collecting — '+episodes.length+' of '+P.minEpisodes+
-      ' closed episodes needed before stats are shown. Episodes accumulate automatically as buy-zone entries resolve to TP or below-zone. No synthetic numbers.</div>';
-  }else{
-    const all=v9Stats(episodes);
-    const T=(title,rows)=>'<div style="font-weight:700;font-size:12px;margin:14px 0 6px">'+title+'</div>'+
-      '<table style="width:100%;font-size:11px;font-family:var(--mono)"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
-    html+=T('Overall','<tr><td>ALL</td>'+v9FmtStats(all)+'</tr>');
-    html+=T('By regime at entry — the table that decides sizing',
-      v9GroupStats(episodes,e=>e.entry.regime).map(g=>'<tr><td>'+g.key+'</td>'+v9FmtStats(g)+'</tr>').join(''));
-    const flowRows=v9GroupStats(episodes.filter(e=>e.entry.flow),e=>e.entry.flow);
-    html+=T('By ETF flow state at entry',flowRows.length
-      ?flowRows.map(g=>'<tr><td>'+g.key+'</td>'+v9FmtStats(g)+'</tr>').join('')
-      :'<tr><td colspan="6" style="color:var(--txt4)">No episodes with flow data yet (flow logging started in v9)</td></tr>');
-    // Contribution table — the pruning decision
-    const contrib=v9Contribution(episodes);
-    const contribN=contrib.length?contrib[0].n:0;
-    if(contribN>=P.minContribN){
-      html+='<div style="font-weight:700;font-size:12px;margin:14px 0 6px">Indicator contribution (flag ON vs OFF at entry)</div>'+
-        '<table style="width:100%;font-size:11px;font-family:var(--mono)"><thead><tr><th style="text-align:left">Indicator</th><th>Exp. ON</th><th>Exp. OFF</th><th>Separation</th></tr></thead><tbody>'+
-        contrib.map(c=>{
-          const sep=c.sep===null?'—':(c.sep>=0?'+':'')+c.sep.toFixed(2)+'R';
-          const flag=c.sep!==null&&Math.abs(c.sep)<0.1?' <span style="color:var(--amber)">← redundancy candidate</span>':'';
-          return'<tr><td>'+c.name+'</td><td style="text-align:center">'+(c.on?(c.on.expectancy>=0?'+':'')+c.on.expectancy.toFixed(2)+'R (n'+c.on.n+')':'—')+
-            '</td><td style="text-align:center">'+(c.off?(c.off.expectancy>=0?'+':'')+c.off.expectancy.toFixed(2)+'R (n'+c.off.n+')':'—')+
-            '</td><td style="text-align:center">'+sep+flag+'</td></tr>'}).join('')+'</tbody></table>'+
-        '<div style="font-size:10px;color:var(--txt4);margin-top:6px">An indicator whose ON/OFF expectancy separation stays under ±0.10R is not adding information — prune it in params, don\'t keep paying its whipsaw cost.</div>';
-    }else{
-      html+='<div style="font-size:11px;color:var(--txt3);margin-top:12px">Indicator contribution: collecting ('+contribN+' of '+P.minContribN+
-        ' snapshot-tagged episodes). The prune-one-oscillator decision waits for this table — measured, not guessed.</div>';
-    }
-    html+='<div style="font-size:10px;color:var(--txt4);margin-top:12px">R is exact by construction (zones ladder TPs in R-multiples of the ATR stop). Losses resolve at -1R when price exits below the buy zone. Open episodes are excluded until resolved.</div>';
-  }
-  document.getElementById('moContent').innerHTML=html;
-  document.getElementById('moOverlay').classList.add('op');document.body.style.overflow='hidden';
-}
-
-function openLogMo(){
-  const log=v8eReadLog();
-  const rows=log.slice(-60).reverse().map(e=>
-    '<tr><td style="white-space:nowrap;color:var(--txt3)">'+e.t.replace('T',' ').slice(5,19)+'</td><td><b>'+e.sym+'</b></td><td>'+e.event+'</td><td>'+fmtP(e.price)+'</td><td style="text-align:center">'+e.score+'</td><td>'+e.regime+'</td><td style="color:var(--txt3)">'+(e.detail||'')+'</td></tr>'
-  ).join('');
-  document.getElementById('moContent').innerHTML=
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-    '<div style="font-weight:700">Signal Log <span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">'+log.length+' events · forward-test blotter</span></div>'+
-    '<div style="display:flex;gap:6px">'+
-    '<button class="btn btn-sm" onclick="v8eExportLog()">Export CSV</button>'+
-    '<button class="btn btn-sm" onclick="if(confirm(\'Clear the entire signal log?\')){v8eWriteLog([]);openLogMo()}">Clear</button>'+
-    '<button class="btn btn-sm" onclick="closeMo()">✕</button></div></div>'+
-    (log.length
-      ?'<div style="overflow:auto;max-height:60vh"><table style="width:100%;font-size:11px;font-family:var(--mono)"><thead><tr><th>Time (UTC)</th><th>Coin</th><th>Event</th><th>Price</th><th>Score</th><th>Regime</th><th>Detail</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-      :'<div style="color:var(--txt3);font-size:12px;padding:20px 0">No events yet — regime flips, knife triggers, score-band crossings and zone transitions are logged automatically as data refreshes.</div>');
-  document.getElementById('moOverlay').classList.add('op');document.body.style.overflow='hidden';
-}
-function v8eExportLog(){
-  const log=v8eReadLog();if(!log.length)return;
-  const cols=['t','sym','mode','event','price','score','regime','buyTFs','sellTFs','detail'];
-  const csv=[cols.join(',')].concat(log.map(e=>cols.map(c=>{
-    const v=e[c]===undefined?'':String(e[c]);
-    return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
-  }).join(','))).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='precisiontimer-signal-log-'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();URL.revokeObjectURL(a.href);
-}
-
-/* ===== MAIN ===== */
-async function loadAll(){
-  refreshEthBtc(); // v9.3: non-blocking, self-throttled to 30 min
-  showSt('Fetching Binance '+mode.toUpperCase()+' data…','load');
-  const prog=document.getElementById('progBar');
-  const progTxt=document.getElementById('progTxt');
-  const interDelay=mode==='scalp'?250:150; // More breathing room in scalp mode
-  let failCount=0,firstErr='';
-
-  for(let i=0;i<COINS.length;i++){
-    try{
-      const result=await analyzeSymbol(COINS[i]);
-      allData[COINS[i].sym]=result;
-      if(prog)prog.style.width=Math.round((i+1)/COINS.length*100)+'%';
-      if(progTxt)progTxt.textContent=(i+1)+' / '+COINS.length+' coins — '+COINS[i].name;
-    }catch(e){
-      failCount++;
-      if(!firstErr)firstErr=e.message;
-      console.warn('Failed:',COINS[i].sym,e.message);
-      // If the first 3 all fail, the endpoint is likely blocked
-      if(i===2&&failCount>=3){
-        showSt('⚠ '+failCount+' coins failed · '+firstErr+' · Check console','err');
-      }
-    }
-    if(i<COINS.length-1)await new Promise(r=>setTimeout(r,interDelay));
-  }
-
-  renderTable();
-  updateBanner(selSym);
-  v8eSnapshotAndLog(); // v8e: diff against previous pass, record signal events
-  const labels=MODE_CONFIG[mode].labels.join(' + ');
-  const loadedCount=Object.keys(allData).length;
-  if(failCount>0){
-    showSt('⚠ '+loadedCount+'/'+COINS.length+' loaded · '+mode.toUpperCase()+' · '+labels+' · '+failCount+' failed ('+firstErr+')','warn');
-  }else{
-    const ep=workingEndpoint?(workingEndpoint.startsWith('/')?'proxy':workingEndpoint.split('/')[2]):'unknown';
-    showSt(mode.toUpperCase()+' mode · '+loadedCount+' coins · '+labels+' · '+ep+' · '+new Date().toLocaleTimeString(),'ok');
-  }
-}
-
-function refreshAll(){
-  document.getElementById('rIco').classList.add('spin');
-  loadAll().finally(()=>document.getElementById('rIco').classList.remove('spin'));
-}
-
-let refreshTimer=null;
-function setMode(newMode){
-  if(mode===newMode)return;
-  mode=newMode;
-  document.getElementById('modeSwingBtn').classList.toggle('active',mode==='swing');
-  document.getElementById('modeScalpBtn').classList.toggle('active',mode==='scalp');
-  // Update banner stat labels based on mode
-  const L=MODE_CONFIG[mode].labels;
-  const statsEl=document.querySelectorAll('.tk-stats > span');
-  if(statsEl.length>=4){
-    statsEl[0].innerHTML=L[0]+' Stoch: <b id="hStoch1">—</b>';
-    statsEl[1].innerHTML=L[1]+' RSI: <b id="hRsi4">—</b>';
-    statsEl[2].innerHTML=L[2]+' Stoch: <b id="hStoch12">—</b>';
-    statsEl[3].innerHTML=L[3]+' RSI: <b id="hRsi1d">—</b>';
-  }
-  // Update table headers
-  const ths=document.querySelectorAll('th[data-col]');
-  ths.forEach(th=>{
-    const col=th.dataset.col;
-    const arrow=th.querySelector('.sa').outerHTML;
-    if(col==='stoch1')th.innerHTML=L[0]+' Stoch '+arrow;
-    else if(col==='rsi4')th.innerHTML=L[1]+' RSI '+arrow;
-    else if(col==='stoch4')th.innerHTML=L[1]+' Stoch '+arrow;
-    else if(col==='stoch12')th.innerHTML=L[2]+' Stoch '+arrow;
-    else if(col==='rsi1d')th.innerHTML=L[3]+' RSI '+arrow;
-  });
-  // Update buy zone status label (4H Status → 30M Status)
-  const statLblEl=document.getElementById('zBuyStatLbl');
-  if(statLblEl)statLblEl.textContent=L[1]+' Status';
-  // Update indicator grid source label
-  const indSrc=document.getElementById('indSrc');
-  if(indSrc)indSrc.textContent='BINANCE '+L.join(' + ')+' CANDLES · COMPUTING…';
-  // Update footer
-  const ft=document.querySelector('.ft');
-  if(ft){
-    const modeTxt=mode==='scalp'?'SCALP MODE · 2-4% targets · 1-2% stops':'SWING MODE · larger targets';
-    ft.innerHTML='All indicators computed from <b>real Binance OHLCV candles</b> — RSI(14), Stoch RSI(3,3,14,14), MACD(12,26,9), SQZMOM(20) calculated in-browser<br>'+modeTxt+' · Timeframes: '+L.join(' + ')+' · 4 calls per coin · Refreshes every '+(MODE_CONFIG[mode].refresh/1000)+'s · Not financial advice';
-  }
-  // Update toggle label
-  document.getElementById('igSrcLbl')&&(document.getElementById('igSrcLbl').textContent=L.join(' + ')+' CANDLES · REAL OHLCV');
-  // Clear zone cards immediately so user doesn't see stale prev-mode zones during fetch
-  const clearTargets=['zBuyTitle','zBuySub','zBuyDist','zBuy4h','zBuyStop','rrRiskL','rrRewL',
-                      'zSellTitle','zSellSub','zSellDist','zSellSig','zSellRR',
-                      'hP','hName','hNextAct','hScore','hSigLbl',
-                      'tsLvl','tsDesc','tsLock','szRes','soBody','soTotal'];
-  clearTargets.forEach(id=>{
-    const el=document.getElementById(id);
-    if(el)el.innerHTML='—';
-  });
-  const tb=document.getElementById('hTradeBanner');
-  if(tb){tb.className='ts-banner wait';tb.textContent='Loading '+newMode.toUpperCase()+' data…'}
-  // Clear data and reload
-  __prevSnap={}; // v8e: zone stages aren't comparable across modes — reset the diff base
-  const fn=document.getElementById('fundNote');if(fn){fn.style.color='var(--txt4)';fn.textContent='Funding/OI: —'}
-  const sv=document.getElementById('szVol');if(sv)sv.textContent='Vol regime: —';
-  allData={};
-  workingEndpoint=null; // Reset so fallback endpoints get tried fresh
-  showSt('Switching to '+newMode.toUpperCase()+' mode…','load');
-  clearInterval(refreshTimer);
-  loadAll();
-  refreshTimer=setInterval(loadAll,MODE_CONFIG[mode].refresh);
-}
-
-(function(){const lc=document.getElementById('logCount');if(lc)lc.textContent=v8eReadLog().length})();
-loadAll();
-refreshTimer=setInterval(loadAll,MODE_CONFIG[mode].refresh);
-refreshEtfFlows(); // v9: flows update once per trading day → poll every 30 min
-setInterval(refreshEtfFlows,V8E_PARAMS.flow.refreshMs);
+load().catch(e => { $('banners').replaceChildren(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'Page error. '), String(e && e.message || e)))); });
+setInterval(() => load().catch(() => {}), 5 * 60e3);
 </script>
 </body>
 </html>

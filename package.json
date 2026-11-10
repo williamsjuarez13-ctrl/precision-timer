@@ -1,9 +1,17 @@
 {
   "name": "precision-timer",
-  "version": "1.0.0",
-  "description": "Real-time crypto TA dashboard with Binance proxy",
+  "version": "11.0.0",
+  "description": "PrecisionTimer \u2014 measured crypto market board (rank, market state, calibrated ranges) with a self-scoring ledger",
   "private": true,
+  "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "calibrate": "node --max-old-space-size=6000 scripts/calibrate.js",
+    "scan": "node scripts/scan.js",
+    "paper": "node scripts/paper-run.js",
+    "dev": "node tools/dev-server.mjs"
   }
 }
