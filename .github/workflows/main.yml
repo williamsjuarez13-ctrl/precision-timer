@@ -1,0 +1,61 @@
+name: PrecisionTimer scan
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: pt-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Check out the data branch (created on the first run)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH=$(node -e "import('./pt.config.js').then(m => console.log(m.default.dataBranch))")
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          git config --global user.name "precision-timer-scan"
+          git config --global user.email "actions@users.noreply.github.com"
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$REMOTE" "$BRANCH" > /dev/null 2>&1; then
+            git clone --quiet --depth 1 --branch "$BRANCH" "$REMOTE" data
+          else
+            mkdir data && cd data && git init --quiet -b "$BRANCH" && git remote add origin "$REMOTE"
+          fi
+
+      - name: Scan
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node scripts/scan.js --data-dir data
+
+      - name: Publish
+        if: always()
+        run: |
+          cd data
+          git add -A
+          git diff --cached --quiet || git commit --quiet -m "scan $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --quiet origin "$BRANCH"
+
+      - name: Keep the schedule alive
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pt-scan.yml/enable"
