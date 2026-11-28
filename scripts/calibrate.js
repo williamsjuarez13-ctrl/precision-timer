@@ -23,6 +23,7 @@ import { snapshot, indexAt } from '../engine/board.js';
 import { HORIZONS, PROBS, TOUCH_STEP, TOUCH_MAX, STOPS, TARGETS, bands, touchProb, planOdds } from '../engine/forecast.js';
 import { DETECTORS, planFor } from '../engine/detectors.js';
 import { makeClient, pooled } from '../engine/data.js';
+import { gatePath, exposurePath } from '../engine/signal.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = new Set(process.argv.slice(2));
@@ -112,6 +113,9 @@ async function main() {
     mkt[D] = { ...snap.market, n: snap.members.length };
     for (const m of snap.members) { if (m.rankPct === null) continue; R.D.push(D); R.S.push(m.S); R.i.push(m.i); R.q.push(m.quintile); R.tier.push(m.tier); R.rp.push(m.rankPct); R.sg.push(m.f.sigma); R.ev.push(m.events); }
   }
+  // the gate has hysteresis: replay it day by day over the whole history
+  { const gp = gatePath(mkt.map(m => (m ? { trend: m.trend, full: 3 } : null)), config.regime);
+    for (let D = 0; D < T; D++) if (mkt[D]) mkt[D].gate = gp[D] === true ? 'ON' : 'OFF'; }
   const N = R.D.length;
   log(`replay done in ${((Date.now() - t00) / 1000).toFixed(1)}s — ${N} member-days, ${mkt.filter(Boolean).length} days with a universe`);
 
@@ -182,6 +186,49 @@ async function main() {
   for (const [name, ret] of [['BTC', dailyRet(btc)], ['ETH', dailyRet(eth)], ['universe', ewRet]]) {
     market.gateCurves[name] = {};
     for (const e of ['train', 'test']) market.gateCurves[name][e] = { hold: curve(ret, false, ERAS[e]), gated: curve(ret, true, ERAS[e]) };
+  }
+
+  /* ───────── 4b. DAILY SIGNAL (engine/signal.js) — the record printed next to every briefing ───────── */
+  const signal = { coins: {}, note: 'decision at the daily close, held to the next close; 0.10% cost per unit of exposure changed' };
+  { const gp = gatePath(mkt.map(m => (m ? { trend: m.trend, full: 3 } : null)), config.regime);
+    const gateOf = tt => { const D = dayIdx(tt); return D >= 0 && D < T && mkt[D] ? gp[D] : null; };
+    const v11Of = tt => { const D = dayIdx(tt); return D >= 0 && D < T && mkt[D] ? mkt[D].trend >= 2 : null; };
+    const firstD = mkt.findIndex(Boolean);
+    const sim = (S, xs, lo, hi) => {            // xs[i] = exposure decided at close i
+      let eq = 1, hold = 1, pk = 1, hpk = 1, dd = 0, hdd = 0, n = 0, ex = 0, sw = 0, prev = 0;
+      const trades = []; let open = null;
+      for (let i = lo; i < hi; i++) { const x = xs[i] ?? 0, rt = S.c[i + 1] / S.c[i] - 1;
+        if (Math.abs(x - prev) > 1e-9) { eq *= 1 - 0.001 * Math.abs(x - prev); sw++;
+          if (prev === 0) open = { i, eq }; else if (x === 0 && open) { trades.push(eq / open.eq - 1); open = null; } }
+        prev = x; eq *= 1 + x * rt; hold *= 1 + rt; n++; ex += x;
+        pk = Math.max(pk, eq); dd = Math.min(dd, eq / pk - 1); hpk = Math.max(hpk, hold); hdd = Math.min(hdd, hold / hpk - 1); }
+      const yrs = n / 365, w = trades.filter(x => x > 0);
+      return { from: isoDay(S.t[lo]), to: isoDay(S.t[hi]), years: rd(yrs, 2), totalPct: rd((eq - 1) * 100, 1), cagrPct: rd((Math.pow(eq, 1 / yrs) - 1) * 100, 1), maxDrawdownPct: rd(dd * 100, 1),
+        holdTotalPct: rd((hold - 1) * 100, 1), holdCagrPct: rd((Math.pow(hold, 1 / yrs) - 1) * 100, 1), holdMaxDrawdownPct: rd(hdd * 100, 1),
+        exposure: rd(ex / n, 3), changesPerYear: rd(sw / yrs, 1), trades: trades.length, hit: trades.length ? rd(w.length / trades.length, 3) : null,
+        avgWinPct: w.length ? rd(mean(w) * 100, 1) : null, avgLossPct: trades.length > w.length ? rd(mean(trades.filter(x => x <= 0)) * 100, 1) : null };
+    };
+    const coins = [...new Set([...(config.signal.coins || []), ...(config.holdings || []), ...(config.track || [])])];
+    for (const sym of coins) {
+      const S = seriesList.find(x => x.sym === sym); if (!S) continue;
+      const lo0 = Math.max(201, S.t.findIndex(tt => tt >= days[firstD])); if (lo0 < 0 || lo0 >= S.n - 30) continue;
+      const path = exposurePath(S, gateOf, lo0, config.signal.capitulation), xs = path.map(p => (p ? p.x : 0));
+      const old = S.t.map(tt => (v11Of(tt) ? 1 : 0));
+      const splitI = S.t.findIndex(tt => tt >= SPLIT), hi = S.n - 1;
+      // capitulation trades on their own, and what the coin did after every BUY / SELL
+      const capTrades = []; let ci = null;
+      for (let i = lo0; i < S.n; i++) { const p = path[i]; if (!p) continue;
+        if (p.mode === 'capitulation' && ci === null) ci = i;
+        if (ci !== null && p.mode !== 'capitulation') { capTrades.push({ day: isoDay(S.t[ci]), entry: S.c[ci], exit: S.c[i], exitDay: isoDay(S.t[i]), how: p.mode === 'trend' ? 'gate ON (kept, now 100%)' : p.exit, retPct: rd((S.c[i] / S.c[ci] - 1) * 100, 1) }); ci = null; } }
+      const after = { buy: [], sell: [] };
+      for (let i = lo0 + 1; i + 30 < S.n; i++) { const a = xs[i - 1], b = xs[i]; if (a === 0 && b > 0) after.buy.push(S.c[i + 30] / S.c[i] - 1); if (a > 0 && b === 0) after.sell.push(S.c[i + 30] / S.c[i] - 1); }
+      signal.coins[sym] = {
+        all: sim(S, xs, lo0, hi), test: splitI > lo0 ? sim(S, xs, splitI, hi) : null,
+        v11: { all: sim(S, old, lo0, hi), test: splitI > lo0 ? sim(S, old, splitI, hi) : null },
+        capitulation: { n: capTrades.length, hit: capTrades.length ? rd(capTrades.filter(x => x.retPct > 0).length / capTrades.length, 3) : null, medianPct: capTrades.length ? rd(quant(capTrades.map(x => x.retPct).sort((a, b) => a - b), 0.5), 1) : null, recent: capTrades.slice(-6) },
+        after30: { buy: dist(after.buy), sell: dist(after.sell) },
+      };
+    }
   }
 
   /* ───────── 5. EVENTS ───────── */
@@ -306,8 +353,8 @@ async function main() {
   const model = {
     generatedAt: new Date(NOW).toISOString(), engineVersion: config.version, fittedFrom: isoDay(days.find((_, D) => mkt[D])), fittedThrough: isoDay(lastT), split: config.calibration.split,
     sample: { memberDays: N, days: mkt.filter(Boolean).length, series: seriesList.length, universeSizeAtYearEnd: sizeByYear, forecastSamples: allIdx.length },
-    config: { universe: config.universe, rank: config.rank, regime: config.regime, plan: config.plan },
-    rank, market, events, forecast,
+    config: { universe: config.universe, rank: config.rank, regime: config.regime, plan: config.plan, signal: config.signal },
+    rank, market, events, forecast, signal,
   };
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'model.js'), '// GENERATED by scripts/calibrate.js — measurements, not settings. Do not edit by hand; re-run `npm run calibrate`.\nexport default ' + JSON.stringify(model) + ';\n');
@@ -332,7 +379,7 @@ function report(m) {
   const cell = d => (d ? `${f(d.median, 1)}% · up ${pc(d.pUp)} · −10% ${pc(d.pDown10)}` : '—');
   for (const s of [3, 2, 1, 0]) { const o = m.market.byTrend[s]; L.push(`| ${s}/3 | ${o.days} | ${cell(o.BTC[30])} | ${cell(o.ETH[30])} | ${cell(o.universe[30])} |`); }
   { const o = m.market.washout; L.push(`| washout (median RSI < ${m.config.regime.washoutMedianRsi}) | ${o.days} | ${cell(o.BTC[30])} | ${cell(o.ETH[30])} | ${cell(o.universe[30])} |`); }
-  L.push('', '### Exposure gate (hold only when trend ≥ ' + m.config.regime.gateOnAt + '/3; 0.10% per switch)', '', '| asset | period | buy & hold | gated | max drawdown hold → gated | switches / yr |', '|---|---|---|---|---|---|');
+  L.push('', '### Exposure gate (turns ON at ' + m.config.regime.gateOnAt + '/3, OFF at ' + m.config.regime.gateOffAt + '/3; 0.10% per switch)', '', '| asset | period | buy & hold | gated | max drawdown hold → gated | switches / yr |', '|---|---|---|---|---|---|');
   for (const a of ['BTC', 'ETH', 'universe']) for (const e of ['train', 'test']) { const c = m.market.gateCurves[a][e]; L.push(`| ${a} | ${e === 'test' ? 'since ' + m.split.slice(0, 4) : 'before ' + m.split.slice(0, 4)} | ${f(c.hold.totalPct, 0)}% | ${f(c.gated.totalPct, 0)}% | ${f(c.hold.maxDrawdownPct, 0)}% → ${f(c.gated.maxDrawdownPct, 0)}% | ${c.gated.switchesPerYear} |`); }
   L.push('', `## 3. Events — return over the same-day universe, and the frozen plan (stop ${m.events.plan.stopAtr} ATR, target ${m.events.plan.targetAtr} ATR, ${m.events.plan.maxDays} days)`, '',
     `Any coin on any day, same plan: ${f(m.events.plan.baseline.all.meanR, 3)}R (since ${m.split.slice(0, 4)}: ${f(m.events.plan.baseline.test.meanR, 3)}R).`, '',
@@ -342,6 +389,10 @@ function report(m) {
   L.push('', '| just being in the tier (no event) | period | n | 7d excess | 30d excess | plan mean R |', '|---|---|---|---|---|---|');
   for (const tier of ['leader', 'middle', 'laggard']) for (const e of ['all', 'test']) { const o = m.events.tierBaseline[tier][e]; L.push(`| ${tier} | ${e === 'test' ? 'since ' + m.split.slice(0, 4) : 'all'} | ${o.n} | ${o[7] ? f(o[7].excessMean) + '%' : '—'} | ${o[30] ? f(o[30].excessMean) + '%' : '—'} | ${o.plan ? f(o.plan.meanR, 3) : '—'} |`); }
   const V = m.forecast.validation[m.forecast.validation.chosen];
+  L.push('', `## 3b. Daily signal — market gate (ON at ${m.config.regime.gateOnAt}/3, OFF at ${m.config.regime.gateOffAt}/3) + half-size capitulation tranche`, '',
+    '| coin | period | signal CAGR / max DD | buy & hold CAGR / max DD | v11 gate CAGR / max DD | in market | changes / yr | capitulation trades (hit) |', '|---|---|---|---|---|---|---|---|');
+  for (const [sym, c] of Object.entries(m.signal.coins)) for (const e of ['all', 'test']) { const s = c[e], v = c.v11[e]; if (!s) continue;
+    L.push(`| ${sym} | ${e === 'test' ? 'since ' + m.split.slice(0, 4) : s.from.slice(0, 4) + '→'} | ${f(s.cagrPct, 0)}% / ${f(s.maxDrawdownPct, 0)}% | ${f(s.holdCagrPct, 0)}% / ${f(s.holdMaxDrawdownPct, 0)}% | ${f(v.cagrPct, 0)}% / ${f(v.maxDrawdownPct, 0)}% | ${pc(s.exposure)} | ${s.changesPerYear} | ${e === 'all' ? `${c.capitulation.n} (${pc(c.capitulation.hit)})` : ''} |`); }
   L.push('', `## 4. Ranges and touch probabilities — out-of-sample check: fitted before ${m.split}, scored after (tables: ${m.forecast.mode})`, '',
     '| horizon | 80% band held | 50% band held | closed below the 5% line | closed above the 95% line |', '|---|---|---|---|---|');
   for (const k of [7, 30]) L.push(`| ${k}d | ${pc(V.bands[k].in80)} | ${pc(V.bands[k].in50)} | ${pc(V.bands[k].below05)} | ${pc(V.bands[k].above95)} |`);

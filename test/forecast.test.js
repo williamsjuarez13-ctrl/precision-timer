@@ -17,7 +17,8 @@ test('model: has every table the engine reads, for every horizon', () => {
 });
 
 test('model matches the config it was measured with (otherwise: run `npm run calibrate`)', () => {
-  assert.deepEqual(model.config, { universe: config.universe, rank: config.rank, regime: config.regime, plan: config.plan });
+  assert.deepEqual(model.config, { universe: config.universe, rank: config.rank, regime: config.regime, plan: config.plan, signal: config.signal });
+  for (const k of ['BTC', 'ETH']) assert.ok(model.signal.coins[k] && model.signal.coins[k].all.cagrPct !== undefined, k);
   for (const f of config.rank.factors) assert.ok(FACTORS[f], f);
   assert.ok(HORIZONS.includes(config.plan.maxDays));
 });

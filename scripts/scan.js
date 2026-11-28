@@ -59,9 +59,19 @@ function eventsDigest(evs, board, model) {
   if (board.market.gate === 'OFF') L.push('', 'The exposure gate is OFF: these are relative-strength facts, not a reason to add risk.');
   return L.join('\n');
 }
+// The daily briefing as text: one line per coin, actions that changed at this close first.
+export function briefingLines(board) {
+  const sigs = Object.entries(board.signals || {}); if (!sigs.length) return [];
+  sigs.sort((a, b) => (b[1].changedToday ? 1 : 0) - (a[1].changedToday ? 1 : 0));
+  return sigs.map(([sym, s]) => {
+    const why = s.mode === 'trend' ? `market trend ${s.trend}/3` : s.mode === 'capitulation' ? `capitulation tranche since ${s.cap.since} @ ${fmtPrice(s.cap.entry)}, stop ${fmtPrice(s.cap.stop)}` : s.exit ? `capitulation tranche closed (${s.exit})` : `market trend ${s.trend}/3`;
+    const nxt = s.next[0] ? ` · next: ${s.next[0].to > s.exposure ? 'BUY' : 'SELL'} when ${s.next[0].when}` : '';
+    return `${s.changedToday ? '▶ ' : ''}${sym} ${fmtPrice(s.price)}: ${s.action} — ${Math.round(s.exposure * 100)}% (${why})${s.changedToday ? '' : ` since ${s.since}`}${nxt}`;
+  });
+}
 function heartbeatText(board, card, model, state) {
   const m = board.market, rows = new Map([...board.rows, ...(board.extra || [])].map(r => [r.sym, r]));
-  const L = [`PrecisionTimer daily — close of ${board.asOf}`, `Market: trend ${m.trend}/3, exposure gate ${m.gate} for ${m.gateDays}d · breadth ${pc(m.breadth50)} · median RSI ${m.medianRsi}${m.washout ? ' (washout)' : ''}`];
+  const L = [`PrecisionTimer daily — close of ${board.asOf}`, `Market: trend ${m.trend}/3, exposure gate ${m.gate} for ${m.gateDays}d · breadth ${pc(m.breadth50)} · median RSI ${m.medianRsi}${m.washout ? ' (washout)' : ''}`, '', 'BRIEFING', ...briefingLines(board), ''];
   for (const s of board.holdings) { const r = rows.get(s); if (!r) continue; const b = r.bands[7];
     L.push(`${s} ${fmtPrice(r.price)} (7d ${sg(r.chg7)}) · ${r.rank ? `rank #${r.rank}/${board.rows.length} ${r.tier}` : 'outside the universe'} · 7d 80% range ${b ? fmtPrice(b.p10) + '–' + fmtPrice(b.p90) : '—'}`); }
   for (const lv of board.levels.filter(l => l.kind === 'watch')) L.push(`${lv.sym} ${lv.label} ${fmtPrice(lv.level)} (${sg(lv.distPct)}): touch 7d ${pc(lv.touch7)} · 30d ${pc(lv.touch30)}`);
@@ -116,6 +126,9 @@ export async function runScan({ client, now = Date.now(), dataDir, config, model
   const push = (id, kind, title, text) => { if (!state.sent.includes(id)) { alerts.push({ id, at: new Date(now).toISOString(), kind, title, text }); state.sent.push(id); } };
   if (newDay) {
     if (A.gateFlip && state.gate && state.gate !== board.market.gate) push(`gate|${board.asOf}`, 'gate', `Exposure gate ${board.market.gate}`, gateText(board, model));
+    const changed = Object.entries(board.signals || {}).filter(([, s]) => s.changedToday);
+    if (A.signalChange && changed.length) push(`signal|${board.asOf}`, 'signal', `${changed.map(([sym, s]) => `${sym} ${s.action}`).join(', ')}`,
+      [`SIGNAL CHANGE at the ${board.asOf} close`, ...briefingLines(board).filter(l => l.startsWith('▶')).map(l => l.slice(2)), '', `Market trend ${board.market.trend}/3, gate ${board.market.gate}.`].join('\n'));
     const evs = board.events.filter(e => (A.events?.[e.event] || []).includes(e.tier));
     if (evs.length) push(`events|${board.asOf}`, 'event', `${evs.length} event${evs.length > 1 ? 's' : ''}: ${evs.slice(0, 4).map(e => e.sym).join(', ')}${evs.length > 4 ? '…' : ''}`, eventsDigest(evs, board, model));
     // a holding's tier change is only reported once it has held for two closes (ranks near a boundary flap)

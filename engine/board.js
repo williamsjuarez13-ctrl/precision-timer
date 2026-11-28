@@ -10,6 +10,7 @@ import { rankUniverse } from './rank.js';
 import { marketState } from './regime.js';
 import { eventsAt, planFor } from './detectors.js';
 import { bands, touchProb, isExtrapolated } from './forecast.js';
+import { gatePath, exposurePath, briefingFor } from './signal.js';
 
 const pct = (a, b) => (b > 0 ? (a / b - 1) * 100 : null);
 
@@ -81,13 +82,18 @@ export function buildBoard({ seriesList, live = {}, now, model, config }) {
   const snap = snapshot(seriesList, t, config);
   if (snap.members.length < Math.min(30, config.universe.size * 0.3)) throw new Error(`universe has only ${snap.members.length} members — data is incomplete`);
 
-  // market history (≈120 days, using today's candidate set → approximate; display only)
-  const hist = [];
-  for (let d = 119; d >= 1; d--) {
+  // market history (≈180 days, using today's candidate set). The gate has hysteresis, so its state today
+  // depends on the path: it is replayed over this window from the first decisive reading.
+  const HIST = 180, hist = [];
+  for (let d = HIST - 1; d >= 1; d--) {
     const s = snapshot(seriesList, t - d * DAY, config, { withEvents: false });
-    if (s.btc && s.members.length >= 20) hist.push({ day: iso(t - d * DAY), trend: s.market.trend, gate: s.market.gate, breadth50: r(s.market.breadth50, 3) });
+    if (s.btc && s.members.length >= 20) hist.push({ t: t - d * DAY, day: iso(t - d * DAY), trend: s.market.trend, breadth50: r(s.market.breadth50, 3) });
   }
-  hist.push({ day: iso(t), trend: snap.market.trend, gate: snap.market.gate, breadth50: r(snap.market.breadth50, 3) });
+  hist.push({ t, day: iso(t), trend: snap.market.trend, breadth50: r(snap.market.breadth50, 3) });
+  const gp = gatePath(hist.map(h => ({ trend: h.trend, full: 3 })), config.regime);
+  hist.forEach((h, j) => { h.gate = gp[j] === true ? 'ON' : 'OFF'; h.gateKnown = gp[j] !== null; });
+  snap.market.gate = hist[hist.length - 1].gate;
+  const gateOn = new Map(hist.map((h, j) => [h.t, gp[j]]));
   let gateDays = 1; for (let j = hist.length - 2; j >= 0 && hist[j].gate === snap.market.gate; j--) gateDays++;
   let trendDays = 1; for (let j = hist.length - 2; j >= 0 && hist[j].trend === snap.market.trend; j--) trendDays++;
 
@@ -132,6 +138,23 @@ export function buildBoard({ seriesList, live = {}, now, model, config }) {
   for (const w of config.watch || []) addLevel(w.sym, w.label || 'watch level', w.level, 'watch');
   for (const sym of config.holdings || []) { const m = bySym.get(sym); if (m) for (const L of autoLevels(m.S, m.i)) addLevel(sym, L.label, L.level, 'auto'); }
 
+  // daily signal per briefed coin (engine/signal.js), replayed over the same window as the gate
+  const signals = {}, C = config.signal.capitulation, measured = (model.signal && model.signal.coins) || {};
+  for (const sym of [...new Set([...(config.signal.coins || []), ...(config.holdings || [])])]) {
+    const S = seriesList.find(x => x.sym === sym), i = S ? indexAt(S, t) : -1;
+    if (i < 201) continue;
+    const from = Math.max(201, i - HIST + 1);
+    const path = exposurePath(S, tt => (gateOn.has(tt) ? gateOn.get(tt) : null), from, C);
+    const b = briefingFor(S, path, i, snap.market.gate, snap.market.trend, C, config.regime);
+    if (!b) continue;
+    const days = [], close = [], x = [];
+    for (let j = from; j <= i; j++) { days.push(iso(S.t[j])); close.push(sig(S.c[j])); x.push(path[j] ? path[j].x : 0); }
+    signals[sym] = { ...b, since: iso(S.t[b.since]), sincePrice: sig(b.sincePrice), rsi: r(b.rsi, 1), vs200: r(b.vs200, 4), e200: sig(S.e200[i]),
+      cap: b.cap && { since: iso(b.cap.t), entry: sig(b.cap.entry), stop: sig(b.cap.stop) },
+      next: b.next.map(n => ({ ...n, level: n.level === undefined ? undefined : sig(n.level) })),
+      price: sig(live[sym] > 0 ? live[sym] : S.c[i]), close: sig(S.c[i]), history: { days, close, x }, record: measured[sym] || null };
+  }
+
   const events = [];
   for (const m of snap.members) for (const e of m.events || []) {
     const plan = planFor(m.f.close, m.f.atr, config.plan);
@@ -143,13 +166,13 @@ export function buildBoard({ seriesList, live = {}, now, model, config }) {
     modelFittedThrough: model.fittedThrough,
     // true when pt.config.js was changed after the model was measured — the statistics shown then
     // describe the OLD rules. Fix: run the calibrate workflow.
-    configDrift: JSON.stringify(model.config) !== JSON.stringify({ universe: config.universe, rank: config.rank, regime: config.regime, plan: config.plan }),
+    configDrift: JSON.stringify(model.config) !== JSON.stringify({ universe: config.universe, rank: config.rank, regime: config.regime, plan: config.plan, signal: config.signal }),
     market: { ...snap.market, breadth50: r(snap.market.breadth50, 3), breadth200: r(snap.market.breadth200, 3), medianRsi: r(snap.market.medianRsi, 1),
-      btcVs200: r(snap.market.btcVs200, 2), btc30d: r(snap.market.btc30d, 2), gateDays, trendDays, history: hist },
+      btcVs200: r(snap.market.btcVs200, 2), btc30d: r(snap.market.btc30d, 2), gateDays, trendDays, history: hist.map(({ t: _t, ...h }) => h) },
     holdings: (config.holdings || []).filter(s => bySym.has(s) || extra.some(x => x.sym === s)),
     track: (config.track || []).filter(s => bySym.has(s) || extra.some(x => x.sym === s)),
     notInUniverse: wanted.filter(s => !bySym.has(s)),      // held / tracked but outside today's universe (shown without a rank)
     noData: wanted.filter(s => !bySym.has(s) && !extra.some(x => x.sym === s)),   // no usable candles at all — check the ticker
-    rows, extra, levels, events,
+    rows, extra, levels, events, signals,
   };
 }

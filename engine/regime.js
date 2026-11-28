@@ -4,8 +4,9 @@
 //   1. BTC closed above its 200-day EMA
 //   2. BTC is higher than 30 days ago
 //   3. at least half of the universe closed above its own 50-day EMA  (breadth)
-// trend = how many are true (0..3).  gate = ON when trend >= config.regime.gateOnAt (default 2).
-// The gate is an EXPOSURE rule (when adding risk has paid historically), not a price forecast —
+// trend = how many are true (0..3). The gate itself is path-dependent (hysteresis: ON at gateOnAt,
+// OFF at gateOffAt, unchanged in between), so it is computed over a run of days by engine/signal.js
+// gatePath(); a single snapshot only knows the trend. The gate is an EXPOSURE rule (when adding risk has paid historically), not a price forecast —
 // model/model.js carries what actually followed each state, and the board prints that next to it.
 
 const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
@@ -24,7 +25,7 @@ export function marketState(btc, feats, R) {
   };
   const trend = (c.btcAbove200 ? 1 : 0) + (c.btc30dUp ? 1 : 0) + (c.breadthOk ? 1 : 0);
   return {
-    trend, gate: trend >= R.gateOnAt ? 'ON' : 'OFF',
+    trend, gate: null,             // filled in by the caller from gatePath()
     components: c, breadth50, breadth200, medianRsi,
     washout: medianRsi !== null && medianRsi < R.washoutMedianRsi,   // whole market oversold at once
     btcVs200: btc ? btc.v200 : null, btc30d: btc ? btc.chg30 : null, members: n,

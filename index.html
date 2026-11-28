@@ -51,6 +51,13 @@ button{cursor:pointer;color:var(--txt2)}button:hover{border-color:var(--border-h
 input[type=number]{width:110px;font-family:var(--mono)}label{font-size:12px;color:var(--txt3);display:flex;flex-direction:column;gap:4px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
 .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:8px}
+.brief{display:grid;gap:12px}@media(min-width:860px){.brief{grid-template-columns:repeat(2,1fr)}}@media(min-width:1180px){.brief{grid-template-columns:repeat(3,1fr)}}
+.sig{border:1px solid var(--border);border-radius:12px;padding:12px}.sig.chg{border-color:var(--band50)}
+.sig .h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.act{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;letter-spacing:.04em;padding:4px 10px;border-radius:8px;border:1px solid var(--border-h)}
+.act i{width:8px;height:8px;border-radius:50%;background:var(--txt3)}
+.act.buy i,.act.add i,.act.hold i{background:var(--good)}.act.sell i,.act.trim i{background:var(--critical)}.act.out i{background:var(--txt3)}.act.half i{background:var(--warning)}
+.sig ul{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--txt2)}.sig li{margin:2px 0}.sig li b{color:var(--txt)}
 .tile{border:1px solid var(--border);border-radius:10px;padding:10px 12px}.tile .v{font-size:22px;font-weight:600;letter-spacing:-.01em}.tile .l{font-size:12px;color:var(--txt3)}.tile .s{font-size:11.5px;color:var(--txt2);margin-top:2px}
 .meter{position:relative;height:6px;border-radius:4px;background:var(--border);margin-top:8px}.meter b{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--band50)}.meter u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--txt)}
 svg{display:block;width:100%;overflow:visible}svg text{font-family:var(--mono);font-size:10.5px;fill:var(--txt2)}
@@ -72,6 +79,7 @@ footer{color:var(--txt3);font-size:12px;margin-top:22px}
     <a class="chip" href="classic.html">Classic dashboard</a>
   </header>
   <div id="banners"></div>
+  <section class="card" id="briefing"><h2>Daily briefing</h2><p class="note">Loading…</p></section>
   <div class="grid g2">
     <section class="card" id="market"><h2>Market</h2><p class="note">Loading…</p></section>
     <section class="card" id="mine"><h2>Your coins</h2><p class="note">Loading…</p></section>
@@ -106,7 +114,7 @@ function showTip(ev, title, rows) { tip.replaceChildren(h('b', {}, title), ...ro
 const hideTip = () => { tip.hidden = true; };
 const hover = (el, title, rows) => { el.addEventListener('pointermove', e => showTip(e, typeof title === 'function' ? title() : title, typeof rows === 'function' ? rows() : rows)); el.addEventListener('pointerleave', hideTip); return el; };
 
-let board = null, card = null, alerts = null, scanState = null, source = '', selected = null, filter = 'all';
+let board = null, card = null, alerts = null, scanState = null, scanBoard = null, source = '', selected = null, filter = 'all';
 const all = () => [...board.rows, ...(board.extra || [])];
 const rowOf = sym => all().find(r => r.sym === sym);
 
@@ -121,23 +129,29 @@ async function load() {
   const stale = !scan || Date.now() - Date.parse(scan.generatedAt) > 3 * 3600e3;
   if (stale && !local) { try { live = await getJson('/api/board'); } catch (e) { errs.push(e.message); } }
   board = live && (!scan || Date.parse(live.generatedAt) > Date.parse(scan.generatedAt)) ? live : scan;
-  source = board === live ? 'computed on demand' : 'hourly scan';
+  scanBoard = scan;
+  source = board === live ? (scan ? `prices on demand · scan ran ${ago(scan.generatedAt)}` : 'computed on demand') : 'scan';
   try { card = await getJson(`${base}/scorecard.json${bust}`); } catch { card = null; }
   try { alerts = await getJson(`${base}/alerts.json${bust}`); } catch { alerts = null; }
   try { scanState = await getJson(`${base}/state.json${bust}`); } catch { scanState = null; }
   if (!board) { $('banners').replaceChildren(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'No data. '), `Neither the scan output nor the on-demand endpoint answered (${errs.join('; ')}). Check GitHub → Actions → "PrecisionTimer scan", and that /api/board is deployed.`))); $('age').lastChild.textContent = 'no data'; $('age').className = 'chip st-critical'; return; }
   selected = selected || (board.holdings[0] && rowOf(board.holdings[0]) ? board.holdings[0] : 'ETH');
-  render(scan && live && board === live);
+  render();
 }
 
 /* ───────── header + banners ───────── */
-function renderHead(scanStale) {
+function renderHead() {
   const ageMin = (Date.now() - Date.parse(board.generatedAt)) / 60e3, closeAgeH = (Date.now() - Date.parse(board.asOfCloseTime)) / 3600e3;
   const st = closeAgeH > 36 ? 'critical' : ageMin > 180 ? 'warning' : 'good';
   $('age').className = 'chip st-' + st; $('age').lastChild.textContent = `${st === 'good' ? 'Current' : st === 'warning' ? 'Aging' : 'STALE'} · close of ${board.asOf} · prices ${ago(board.generatedAt)} · ${source}`;
   const B = [];
   if (st === 'critical') B.push(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'Stale. '), `The newest daily close on this page is ${board.asOf}. Nothing below reflects the market since then.`)));
-  if (scanStale || (!card && source !== 'hourly scan')) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'The hourly scan is not running. '), 'This board was computed on demand, so it is current — but nothing is being logged, scored or alerted. Fix: GitHub → Actions → "PrecisionTimer scan" (README, step 2).')));
+  // The scan only needs to catch each daily close (00:00 UTC). GitHub starts scheduled runs late or skips
+  // some, so "behind" means: no scan at all, no run for 26h, or a daily close more than 8h old not logged yet.
+  const scanAgeH = scanBoard ? (Date.now() - Date.parse(scanBoard.generatedAt)) / 3600e3 : Infinity;
+  const loggedDay = scanState && scanState.lastLedgerDay;
+  const unlogged = loggedDay && loggedDay < board.asOf && closeAgeH > 8;
+  if (!scanBoard || scanAgeH > 26 || unlogged) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, !scanBoard ? 'The scan has not run yet. ' : `The scan is behind (last run ${ago(scanBoard.generatedAt)}${loggedDay ? ', last close logged ' + loggedDay : ''}). `), 'The board itself is current (computed on demand), but closes are not being logged, scored or alerted until it runs. Check GitHub → Actions → "PrecisionTimer scan".')));
   if (scanState && scanState.lastError) B.push(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'The last scan failed. '), `${scanState.lastError.at.slice(0, 16).replace('T', ' ')} UTC — ${scanState.lastError.message}. Nothing is being logged or alerted until it is fixed (GitHub → Actions → "PrecisionTimer scan").`)));
   if (board.configDrift) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'Settings changed since the model was measured. '), 'The statistics shown describe the previous rules. Run the "PrecisionTimer calibrate" workflow.')));
   if ((Date.now() - Date.parse(model.fittedThrough)) / 864e5 > 60) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'Model is ' + Math.round((Date.now() - Date.parse(model.fittedThrough)) / 864e5) + ' days old. '), 'Re-measure with the "PrecisionTimer calibrate" workflow.')));
@@ -306,8 +320,51 @@ function renderScore() {
   $('score').replaceChildren(...kids);
 }
 
-function render(scanStale) {
-  renderHead(scanStale); renderMarket(); renderMine(); renderDetail(); renderBoard(); renderEvents(); renderScore();
+/* ───────── daily briefing ───────── */
+const actClass = a => ({ BUY: 'buy', ADD: 'add', HOLD: 'hold', 'HOLD HALF': 'half', TRIM: 'trim', SELL: 'sell', 'STAY OUT': 'out' }[a] || 'out');
+function signalChart(sym, s) {
+  const H = s.history, n = H.close.length; if (n < 2) return null;
+  const W = 520, Ht = 110, L = 4, R = 4, T = 8, B = 18, lo = Math.min(...H.close), hi = Math.max(...H.close);
+  const x = j => L + (W - L - R) * j / (n - 1), y = v => T + (Ht - T - B) * (1 - (Math.log(v) - Math.log(lo)) / Math.max(1e-9, Math.log(hi) - Math.log(lo)));
+  const bands = [];
+  for (let j = 0; j < n; j++) { if (!(H.x[j] > 0)) continue; let k = j; while (k + 1 < n && H.x[k + 1] === H.x[j]) k++;
+    bands.push(s_('rect', { x: x(j), y: T, width: Math.max(1, x(k) - x(j) + (W - L - R) / (n - 1)), height: Ht - T - B, fill: H.x[j] >= 1 ? 'var(--band80)' : 'var(--border-h)', opacity: H.x[j] >= 1 ? 0.55 : 0.8 })); j = k; }
+  const marks = [];
+  for (let j = 1; j < n; j++) if (H.x[j] !== H.x[j - 1]) marks.push(s_('circle', { cx: x(j), cy: y(H.close[j]), r: 4, fill: H.x[j] > H.x[j - 1] ? 'var(--good)' : 'var(--critical)', stroke: 'var(--card)', 'stroke-width': 2 }));
+  const cur = s_('g', { style: 'display:none' }, s_('line', { y1: T, y2: Ht - B, stroke: 'var(--txt3)', 'stroke-width': 1 }));
+  const svg = s_('svg', { viewBox: `0 0 ${W} ${Ht}`, role: 'img', 'aria-label': `${sym} last ${n} days with the signal's exposure shaded` }, ...bands,
+    s_('polyline', { points: H.close.map((v, j) => `${x(j).toFixed(1)},${y(v).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--line)', 'stroke-width': 2, 'stroke-linejoin': 'round' }), ...marks,
+    s_('text', { x: L, y: Ht - 4 }, H.days[0].slice(5)), s_('text', { x: W - R, y: Ht - 4, 'text-anchor': 'end' }, H.days[n - 1].slice(5)), cur);
+  svg.addEventListener('pointermove', e => { const r = svg.getBoundingClientRect(), j = Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width * W - L) / (W - L - R) * (n - 1))));
+    cur.style.display = ''; cur.firstChild.setAttribute('x1', x(j)); cur.firstChild.setAttribute('x2', x(j));
+    const ch = j > 0 && H.x[j] !== H.x[j - 1] ? (H.x[j] > H.x[j - 1] ? (H.x[j - 1] === 0 ? 'BUY' : 'ADD') : (H.x[j] === 0 ? 'SELL' : 'TRIM')) : null;
+    showTip(e, H.days[j], [['Close', fp(H.close[j])], ['Signal', Math.round(H.x[j] * 100) + '%'], ...(ch ? [['Action', ch]] : [])]); });
+  svg.addEventListener('pointerleave', () => { cur.style.display = 'none'; hideTip(); });
+  return svg;
+}
+const s_ = (tag, attrs = {}, ...kids) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) e.setAttribute(k, v); for (const c of kids.flat()) if (c) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+function renderBriefing() {
+  const sigs = board.signals || {}, syms = [...new Set([...board.holdings, ...Object.keys(sigs)])].filter(sym => sigs[sym]);
+  if (!syms.length) { $('briefing').replaceChildren(h('h2', {}, 'Daily briefing'), h('p', { class: 'note' }, 'No briefing yet — the scan has not produced signals.')); return; }
+  const changed = syms.filter(sym => sigs[sym].changedToday);
+  const cards = syms.map(sym => { const s = sigs[sym], rec = s.record, chg = s.sincePrice > 0 ? (s.price / s.sincePrice - 1) * 100 : null;
+    const why = s.mode === 'trend' ? `Market trend ${s.trend}/3 — the gate is ON.` : s.mode === 'capitulation' ? `Capitulation tranche bought ${s.cap.since} at ${fp(s.cap.entry)} (gate still OFF).` : s.exit ? `Capitulation tranche closed today (${s.exit}).` : `Market trend ${s.trend}/3 — the gate is OFF.`;
+    return h('div', { class: 'sig' + (s.changedToday ? ' chg' : '') },
+      h('div', { class: 'h' }, h('span', {}, h('b', {}, sym), ' ', h('span', { class: 'mono' }, fp(s.price))),
+        h('span', { class: 'act ' + actClass(s.action) }, h('i', { 'aria-hidden': 'true' }), s.action, ' · ', Math.round(s.exposure * 100) + '%')),
+      h('div', { class: 'note', style: 'margin-top:4px' }, why, ' ', s.changedToday ? h('b', {}, 'Changed at this close.') : `Since ${s.since} at ${fp(s.sincePrice)} (${sg(chg)}).`),
+      signalChart(sym, s),
+      h('ul', {}, ...s.next.map(n => h('li', {}, h('b', {}, n.to > s.exposure ? (s.exposure === 0 ? 'BUY ' : 'ADD ') + Math.round(n.to * 100) + '%' : (n.to === 0 ? 'SELL all' : 'TRIM')), ' when ' + n.when))),
+      rec && rec.all ? h('div', { class: 'note', style: 'margin-top:6px' }, `This rule on ${sym} since ${rec.all.from.slice(0, 4)}: ${sg(rec.all.cagrPct, 0)}/yr, worst drop ${sg(rec.all.maxDrawdownPct, 0)} — holding: ${sg(rec.all.holdCagrPct, 0)}/yr, ${sg(rec.all.holdMaxDrawdownPct, 0)}. In the market ${pc(rec.all.exposure)} of days, ~${Math.round(rec.all.changesPerYear)} changes a year.`) : null); });
+  const m = board.market;
+  $('briefing').replaceChildren(h('h2', {}, 'Daily briefing — close of ' + board.asOf),
+    h('p', { class: 'note', style: 'margin-bottom:10px' }, changed.length ? h('b', {}, `Changed today: ${changed.map(sym => `${sym} ${sigs[sym].action}`).join(', ')}. `) : 'No changes at this close. ',
+      `Market trend ${m.trend}/3, gate ${m.gate} for ${m.gateDays} days. Shaded on each chart: when the signal was in (dark = 100%, light = 50% capitulation tranche); green dot = buy, red dot = sell. It will not catch the exact top or bottom: since 2020 it caught a median 47–73% of each big rally (by coin) and took 25–48% of each big fall.`),
+    h('div', { class: 'brief' }, cards));
+}
+
+function render() {
+  renderHead(); renderBriefing(); renderMarket(); renderMine(); renderDetail(); renderBoard(); renderEvents(); renderScore();
   $('foot').textContent = `PrecisionTimer ${board.version} · decisions use closed daily candles only; live prices are for distance and display · data: ${board.source || 'Binance spot'} · not financial advice`;
 }
 load().catch(e => { $('banners').replaceChildren(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'Page error. '), String(e && e.message || e)))); });

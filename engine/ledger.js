@@ -22,6 +22,7 @@ export function entriesFor(board, model) {
   out.push({ type: 'market', id: `market|${day}`, day, trend: board.market.trend, gate: board.market.gate,
     btc: bySym.get('BTC')?.close ?? null, eth: bySym.get('ETH')?.close ?? null });
   out.push({ type: 'rank', id: `rank|${day}`, day, members: board.rows.filter(r => r.quintile).map(r => [r.sym, r.close, r.quintile]) });
+  if (board.signals) out.push({ type: 'signal', id: `signal|${day}`, day, coins: Object.entries(board.signals).map(([sym, s]) => [sym, s.exposure, s.action, s.close]) });
   for (const sym of board.track) {
     const r = bySym.get(sym); if (!r || !(r.sigma > 0)) continue;
     for (const k of BAND_HORIZONS) {
@@ -75,7 +76,7 @@ export async function scoreDue(lines, lastClosed, closeOn, barsBetween) {
 export function scorecard(lines) {
   const entries = new Map(lines.filter(l => l.type !== 'score').map(l => [l.id, l]));
   const sc = lines.filter(l => l.type === 'score');
-  const out = { firstDay: null, lastDay: null, daysLogged: 0, bands: {}, rank: {}, events: {}, gate: null, recentEvents: [], pending: { bands: 0, events: 0 } };
+  const out = { firstDay: null, lastDay: null, daysLogged: 0, bands: {}, rank: {}, events: {}, gate: null, signal: null, recentEvents: [], pending: { bands: 0, events: 0 } };
   const mk = lines.filter(l => l.type === 'market').sort((a, b) => (a.day < b.day ? -1 : 1));
   if (mk.length) { out.firstDay = mk[0].day; out.lastDay = mk[mk.length - 1].day; out.daysLogged = mk.length; }
   for (const k of BAND_HORIZONS) {
@@ -104,6 +105,19 @@ export function scorecard(lines) {
     }
     for (const key of ['eth', 'btc']) { g[key].hold = +((g[key].hold - 1) * 100).toFixed(2); g[key].gated = +((g[key].gated - 1) * 100).toFixed(2); }
     out.gate = g;
+  }
+  // daily signal, lived: each coin held at the exposure logged at one close until the next consecutive close
+  const sg = lines.filter(l => l.type === 'signal').sort((a, b) => (a.day < b.day ? -1 : 1));
+  if (sg.length >= 2) {
+    const acc = {};
+    for (let j = 0; j + 1 < sg.length; j++) {
+      const a = sg[j], b = sg[j + 1]; if (dayMs(b.day) - dayMs(a.day) !== DAY) continue;
+      const nb = new Map(b.coins.map(c => [c[0], c]));
+      for (const [sym, x, action, close] of a.coins) { const c2 = nb.get(sym); if (!c2 || !(close > 0) || !(c2[3] > 0)) continue;
+        const s = (acc[sym] = acc[sym] || { days: 0, hold: 1, signal: 1, changes: 0, last: null }); const r = c2[3] / close;
+        s.days++; s.hold *= r; s.signal *= 1 + x * (r - 1); if (s.last !== null && s.last !== x) s.changes++; s.last = x; void action; }
+    }
+    out.signal = Object.fromEntries(Object.entries(acc).map(([k, s]) => [k, { days: s.days, holdPct: +((s.hold - 1) * 100).toFixed(2), signalPct: +((s.signal - 1) * 100).toFixed(2), changes: s.changes }]));
   }
   return out;
 }

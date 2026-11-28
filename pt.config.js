@@ -4,7 +4,7 @@
 // changing those run the "PrecisionTimer calibrate" workflow (Actions tab) to re-measure the model.
 
 export default {
-  version: '11.0.0',
+  version: '12.0.0',
 
   // Where the hourly scan stores its output (board, ledger, scorecard). The page reads it from here.
   repo: 'williamsjuarez13-ctrl/precision-timer',
@@ -28,8 +28,18 @@ export default {
   // ── Market layer ───────────────────────────────────────────────────────────────────────────────
   regime: {
     breadthThreshold: 0.5,         // "breadth OK" = at least this share of the universe above its 50-day EMA
-    gateOnAt: 2,                   // exposure gate is ON when at least this many of the 3 trend facts are true
+    gateOnAt: 2,                   // exposure gate turns ON when at least this many of the 3 trend facts are true…
+    gateOffAt: 1,                  // …and OFF when this many or fewer are. 2/1 = no hysteresis (tested 3/1, 3/0, 2/0:
+                                   // fewer flips, but lower returns since 2020 — docs/EVIDENCE.md, section 7)
     washoutMedianRsi: 35,          // whole-market oversold flag
+  },
+
+  // ── Daily signal (engine/signal.js): extra half-size tranche bought on capitulation while the gate is OFF ──
+  signal: {
+    // coins: where the tranche is used. Measured since 2020 it added to BTC and ETH and was neutral across
+    // ten large coins on average, so it is on for those two only (model/REPORT.md, section 3b).
+    capitulation: { coins: ['BTC', 'ETH'], rsi: 30, below200: 0.15, size: 0.5, exitRsi: 65, exitWithin200: 0.10, maxDays: 90, stopLookback: 20 },
+    coins: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'LINK', 'AVAX'],   // briefed on the board (holdings are always added)
   },
 
   // ── Frozen plan attached to every logged event (and the default in the plan calculator) ────────
@@ -49,6 +59,7 @@ export default {
   alerts: {
     events: { IGNITION: ['leader'], COIL: ['leader'] },   // which (event, rank tier) pairs are worth a message
     gateFlip: true,                 // exposure gate turned ON or OFF at the daily close
+    signalChange: true,             // a briefed coin's action changed (BUY / ADD / TRIM / SELL)
     holdingsTier: true,             // one of `holdings` moved between leader / middle / laggard
     touchProb30: 0.20,              // a watch level's 30-day touch probability crossed above this
     heartbeatHourUTC: 14,           // one summary a day at this hour, so silence always means "broken"
@@ -56,7 +67,7 @@ export default {
 
   // ── Measurement ────────────────────────────────────────────────────────────────────────────────
   calibration: {
-    start: '2020-01-01',            // history used
+    start: '2018-01-01',            // history used
     split: '2024-01-01',            // forecast tables are fitted before this date and scored after it;
                                     // every other statistic is reported separately for the period since
   },

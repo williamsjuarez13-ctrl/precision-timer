@@ -175,3 +175,36 @@ npm test                               # no-look-ahead, live/backtest parity, le
 Section 2 used a browser-sandbox replay of the old page (not shipped — it tests code that v11
 replaces); the one finding that matters going forward, the dead veto block, is fixed in
 `classic.html` by `tools/patch-classic.mjs`, which lists every change against v9.3.
+
+## 7. v12 — the daily signal (Nov 2026)
+
+Question asked after the Nov 2026 drop: can the board time the swings (lows in Feb, Jun and Nov 2026,
+rallies between) closely enough to say BUY, HOLD or SELL 100% every day?
+
+Method: daily candles back to Aug 2017 (9.3 years, three bear markets), every rule decided at the daily
+close, 0.10% per change in exposure. Rules were compared on 2017-21 and judged on 2022-26 across eight
+coins, then re-checked with the board's own engine and top-100 universe (`npm run calibrate`, report
+section 3b).
+
+| Rule family tested | What happened |
+|---|---|
+| v11 market gate (ON at 2/3, OFF at 1/3) | Beat buy-and-hold on all 8 coins in 2022-26, with smaller drawdowns. Still the core. |
+| Buy every capitulation, sell the rally to the 200-day EMA | Lost money: buying falling knives without the trend's permission. |
+| Gate + scale-out when overheated (RSI ≥ 80, 40%+ over the 200-day) | Worse: strong trends keep going. Overheat trims cost more than they saved. |
+| Faster gates, laddered exposure, volatility targeting | Better on 2017-21, not better on 2022-26. Not adopted. |
+| Gate with hysteresis (ON at 3/3, OFF at 1/3, and variants) | Flips 8×/yr instead of 19×. Better with one breadth definition, worse since 2020 with the board's universe. Not robust → not adopted; the setting exists (regime.gateOnAt / gateOffAt). |
+| Gate + half-size capitulation tranche (RSI crosses back above 30 with a close above the prior high, 15%+ under the 200-day; sell at RSI 65 near the 200-day, stop at the 20-day low, 90-day limit) | Robust across every parameter tried, small on average across coins, clearly positive for ETH (+106%/yr vs +93% for the gate alone since 2020) and slightly for BTC. Adopted for BTC and ETH. |
+
+What the shipped signal did since 2020 (decision at the close, held to the next close):
+
+| | Signal | Buy & hold |
+|---|---|---|
+| BTC | +59%/yr, worst drop −37% | +33%/yr, −77% |
+| ETH | +106%/yr, worst drop −47% | +36%/yr, −79% |
+| ETH, 2026: Feb low $1,827 → Apr high | bought half at $2,049 (Feb 13) | |
+| ETH, 2026: Jun low $1,568 → Sep high $2,776 | bought half at $1,673 (Jun 11), full at $2,253 (Aug 19), sold all at $2,389 (Oct 22) | |
+
+Across BTC, ETH, SOL, BNB, XRP, LINK and AVAX it caught a median 47–73% of each big rally and took 25–48%
+of each big fall. It is late at both ends by construction and changes position about 20 times a year,
+many of them small whipsaw losses. No rule tested here called a top: the 100% SELL is the gate turning
+OFF, which in 2026 came 14% below the September high — and that was the best of everything tested.

@@ -1,4 +1,4 @@
-# PrecisionTimer v11 — the measured board
+# PrecisionTimer v12 — the measured board
 
 v11 replaces the score with things that were measured on six years of history and still held in
 the most recent three: a market trend state with an exposure gate, a rank of the top coins, calibrated price ranges and
@@ -7,7 +7,7 @@ forecast and scores it later, so the tool keeps checking itself. Why: [docs/EVID
 
 | Page | What it is |
 |---|---|
-| `/` (`index.html`) | The measured board |
+| `/` (`index.html`) | The measured board, opening with the **daily briefing**: BUY / ADD / HOLD / SELL / STAY OUT and a target exposure for each coin in `signal.coins` plus your holdings, what would change it, and that rule's measured record |
 | `/classic.html` | Your v9.3 dashboard with its bugs fixed (v9.4). Zones and intraday view; its score is not validated. |
 
 ## Deploy (about 10 minutes)
