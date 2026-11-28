@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrecisionTimer · Measured Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#030711;--card:#0a1220;--card-h:#121f38;--border:#172240;--border-h:#1e3058;
+  --txt:#e2e8f0;--txt2:#94a3b8;--txt3:#64748b;
+  --band80:#184f95;--band50:#3987e5;--pos:#3987e5;--neg:#e66767;--line:#3987e5;
+  --good:#0ca30c;--warning:#fab219;--serious:#ec835a;--critical:#d03b3b;
+  --mono:'JetBrains Mono',ui-monospace,monospace;--sans:'Outfit',system-ui,sans-serif;--r:14px;
+}
+*{box-sizing:border-box;margin:0}
+html{font-size:15px}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.45}
+a{color:var(--band50);text-decoration:none}a:hover{text-decoration:underline}
+.W{max-width:1180px;margin:0 auto;padding:12px 16px 64px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:6px 0 14px}
+.logo{font-weight:700;font-size:20px;letter-spacing:-.01em}.logo span{color:var(--band50)}.logo small{font-family:var(--mono);font-size:11px;color:var(--txt3);font-weight:500;margin-left:6px}
+.sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--txt2);background:var(--card);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--txt3);flex:none}
+.st-good .dot{background:var(--good)}.st-warning .dot{background:var(--warning)}.st-critical .dot{background:var(--critical)}.st-serious .dot{background:var(--serious)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:12px}
+h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.note{font-size:12.5px;color:var(--txt2)}.muted{color:var(--txt3)}.mono{font-family:var(--mono)}
+.alert{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;border:1px solid var(--border);display:flex;gap:8px;align-items:flex-start}
+.alert b{font-weight:600}.alert.critical{border-color:var(--critical)}.alert.warning{border-color:var(--warning)}
+.grid{display:grid;gap:14px}@media(min-width:860px){.g2{grid-template-columns:1.1fr .9fr}.g3{grid-template-columns:repeat(3,1fr)}}
+.hero{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.hero .big{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1}.hero .lbl{font-size:15px;color:var(--txt2)}
+.facts{display:grid;gap:6px;margin:10px 0 4px}.fact{display:flex;gap:8px;align-items:center;font-size:13.5px}
+.ic{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;color:#04070f}
+.ic.y{background:var(--good)}.ic.n{background:var(--critical);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:500;color:var(--txt3);text-align:right;padding:6px 8px;font-size:11.5px;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{padding:7px 8px;text-align:right;border-bottom:1px solid rgba(23,34,64,.6);font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}.tl{text-align:left}
+tbody tr.click{cursor:pointer}tbody tr.click:hover{background:var(--card-h)}tr.sel{background:var(--card-h)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tag{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;border:1px solid var(--border-h);color:var(--txt2);margin-left:4px}
+.q{display:inline-flex;gap:2px;vertical-align:middle}.q i{width:5px;height:12px;border-radius:2px;background:var(--border-h)}.q i.on{background:var(--band50)}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+button,select,input{font-family:var(--sans);font-size:13px;color:var(--txt);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+button{cursor:pointer;color:var(--txt2)}button:hover{border-color:var(--border-h);color:var(--txt)}button.on{border-color:var(--band50);color:var(--txt)}
+input[type=number]{width:110px;font-family:var(--mono)}label{font-size:12px;color:var(--txt3);display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:8px}
+.brief{display:grid;gap:12px}@media(min-width:860px){.brief{grid-template-columns:repeat(2,1fr)}}@media(min-width:1180px){.brief{grid-template-columns:repeat(3,1fr)}}
+.sig{border:1px solid var(--border);border-radius:12px;padding:12px}.sig.chg{border-color:var(--band50)}
+.sig .h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.act{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;letter-spacing:.04em;padding:4px 10px;border-radius:8px;border:1px solid var(--border-h)}
+.act i{width:8px;height:8px;border-radius:50%;background:var(--txt3)}
+.act.buy i,.act.add i,.act.hold i{background:var(--good)}.act.sell i,.act.trim i{background:var(--critical)}.act.out i{background:var(--txt3)}.act.half i{background:var(--warning)}
+.sig ul{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--txt2)}.sig li{margin:2px 0}.sig li b{color:var(--txt)}
+.tile{border:1px solid var(--border);border-radius:10px;padding:10px 12px}.tile .v{font-size:22px;font-weight:600;letter-spacing:-.01em}.tile .l{font-size:12px;color:var(--txt3)}.tile .s{font-size:11.5px;color:var(--txt2);margin-top:2px}
+.meter{position:relative;height:6px;border-radius:4px;background:var(--border);margin-top:8px}.meter b{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--band50)}.meter u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--txt)}
+svg{display:block;width:100%;overflow:visible}svg text{font-family:var(--mono);font-size:10.5px;fill:var(--txt2)}
+.coin{border:1px solid var(--border);border-radius:12px;padding:12px}.coin .p{font-size:22px;font-weight:600}.coin .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.rb-l{font-size:11.5px;color:var(--txt3);margin:8px 0 2px;display:flex;justify-content:space-between}
+.tip{position:fixed;z-index:9;pointer-events:none;background:#0d1830;border:1px solid var(--border-h);border-radius:8px;padding:8px 10px;font-size:12px;max-width:260px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.tip b{font-weight:600;display:block;margin-bottom:2px}.tip div{display:flex;justify-content:space-between;gap:14px}.tip div span:last-child{font-family:var(--mono)}
+pre{white-space:pre-wrap;font-family:var(--mono);font-size:11.5px;color:var(--txt2);border-top:1px solid var(--border);padding-top:8px;margin-top:8px}
+details summary{cursor:pointer;color:var(--txt2);font-size:13px}
+footer{color:var(--txt3);font-size:12px;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="W">
+  <header>
+    <div class="logo">Precision<span>Timer</span><small>v11 · measured</small></div>
+    <span class="sp"></span>
+    <span class="chip" id="age"><span class="dot"></span><span>loading…</span></span>
+    <a class="chip" href="classic.html">Classic dashboard</a>
+  </header>
+  <div id="banners"></div>
+  <section class="card" id="briefing"><h2>Daily briefing</h2><p class="note">Loading…</p></section>
+  <div class="grid g2">
+    <section class="card" id="market"><h2>Market</h2><p class="note">Loading…</p></section>
+    <section class="card" id="mine"><h2>Your coins</h2><p class="note">Loading…</p></section>
+  </div>
+  <section class="card" id="detail"><h2>Coin detail</h2></section>
+  <section class="card" id="board"><h2>Board</h2></section>
+  <div class="grid g2">
+    <section class="card" id="events"><h2>Events</h2></section>
+    <section class="card" id="score"><h2>Scorecard</h2></section>
+  </div>
+  <footer id="foot"></footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script type="module">
+// The page does no market maths of its own: probabilities come from engine/forecast.js (the same
+// file the backtest and the scan run) reading model/model.js (measurements), under pt.config.js (policy).
+import config from './pt.config.js';
+import model from './model/model.js';
+import { bands, touchProb, planOdds, isExtrapolated, HORIZONS } from './engine/forecast.js';
+
+const $ = id => document.getElementById(id);
+const h = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v === null || v === undefined || v === false) continue; if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v); } for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+const NS = 'http://www.w3.org/2000/svg';
+const s = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) e.setAttribute(k, v); for (const c of kids.flat()) if (c) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+const fp = p => { if (p === null || p === undefined || Number.isNaN(p)) return '—'; const a = Math.abs(p); return a >= 1000 ? p.toLocaleString('en-US', { maximumFractionDigits: 0 }) : a >= 100 ? p.toFixed(1) : a >= 1 ? p.toFixed(2) : a >= 0.01 ? p.toFixed(4) : p.toPrecision(3); };
+const pc = (x, d = 0) => (x === null || x === undefined ? '—' : (x * 100).toFixed(d) + '%');
+const sg = (x, d = 1) => (x === null || x === undefined ? '—' : (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d) + '%');
+const ago = t => { const m = Math.max(0, (Date.now() - Date.parse(t)) / 60e3); return m < 90 ? Math.round(m) + ' min ago' : m < 2880 ? (m / 60).toFixed(1) + ' h ago' : (m / 1440).toFixed(1) + ' days ago'; };
+const tip = $('tip');
+function showTip(ev, title, rows) { tip.replaceChildren(h('b', {}, title), ...rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', {}, b)))); tip.hidden = false; const x = Math.min(window.innerWidth - tip.offsetWidth - 8, ev.clientX + 14), y = Math.min(window.innerHeight - tip.offsetHeight - 8, ev.clientY + 14); tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px'; }
+const hideTip = () => { tip.hidden = true; };
+const hover = (el, title, rows) => { el.addEventListener('pointermove', e => showTip(e, typeof title === 'function' ? title() : title, typeof rows === 'function' ? rows() : rows)); el.addEventListener('pointerleave', hideTip); return el; };
+
+let board = null, card = null, alerts = null, scanState = null, scanBoard = null, source = '', selected = null, filter = 'all';
+const all = () => [...board.rows, ...(board.extra || [])];
+const rowOf = sym => all().find(r => r.sym === sym);
+
+/* ───────── data ───────── */
+async function getJson(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(url.split('?')[0].split('/').pop() + ' → HTTP ' + r.status); return r.json(); }
+async function load() {
+  const local = new URLSearchParams(location.search).get('data');          // ?data=data → read a local scan output folder
+  const base = local ? local.replace(/\/$/, '') : `https://raw.githubusercontent.com/${config.repo}/${config.dataBranch}`;
+  const bust = '?t=' + Math.floor(Date.now() / 300e3);
+  let scan = null, live = null, errs = [];
+  try { scan = await getJson(`${base}/board.json${bust}`); } catch (e) { errs.push(e.message); }
+  const stale = !scan || Date.now() - Date.parse(scan.generatedAt) > 3 * 3600e3;
+  if (stale && !local) { try { live = await getJson('/api/board'); } catch (e) { errs.push(e.message); } }
+  board = live && (!scan || Date.parse(live.generatedAt) > Date.parse(scan.generatedAt)) ? live : scan;
+  scanBoard = scan;
+  source = board === live ? (scan ? `prices on demand · scan ran ${ago(scan.generatedAt)}` : 'computed on demand') : 'scan';
+  try { card = await getJson(`${base}/scorecard.json${bust}`); } catch { card = null; }
+  try { alerts = await getJson(`${base}/alerts.json${bust}`); } catch { alerts = null; }
+  try { scanState = await getJson(`${base}/state.json${bust}`); } catch { scanState = null; }
+  if (!board) { $('banners').replaceChildren(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'No data. '), `Neither the scan output nor the on-demand endpoint answered (${errs.join('; ')}). Check GitHub → Actions → "PrecisionTimer scan", and that /api/board is deployed.`))); $('age').lastChild.textContent = 'no data'; $('age').className = 'chip st-critical'; return; }
+  selected = selected || (board.holdings[0] && rowOf(board.holdings[0]) ? board.holdings[0] : 'ETH');
+  render();
+}
+
+/* ───────── header + banners ───────── */
+function renderHead() {
+  const ageMin = (Date.now() - Date.parse(board.generatedAt)) / 60e3, closeAgeH = (Date.now() - Date.parse(board.asOfCloseTime)) / 3600e3;
+  const st = closeAgeH > 36 ? 'critical' : ageMin > 180 ? 'warning' : 'good';
+  $('age').className = 'chip st-' + st; $('age').lastChild.textContent = `${st === 'good' ? 'Current' : st === 'warning' ? 'Aging' : 'STALE'} · close of ${board.asOf} · prices ${ago(board.generatedAt)} · ${source}`;
+  const B = [];
+  if (st === 'critical') B.push(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'Stale. '), `The newest daily close on this page is ${board.asOf}. Nothing below reflects the market since then.`)));
+  // The scan only needs to catch each daily close (00:00 UTC). GitHub starts scheduled runs late or skips
+  // some, so "behind" means: no scan at all, no run for 26h, or a daily close more than 8h old not logged yet.
+  const scanAgeH = scanBoard ? (Date.now() - Date.parse(scanBoard.generatedAt)) / 3600e3 : Infinity;
+  const loggedDay = scanState && scanState.lastLedgerDay;
+  const unlogged = loggedDay && loggedDay < board.asOf && closeAgeH > 8;
+  if (!scanBoard || scanAgeH > 26 || unlogged) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, !scanBoard ? 'The scan has not run yet. ' : `The scan is behind (last run ${ago(scanBoard.generatedAt)}${loggedDay ? ', last close logged ' + loggedDay : ''}). `), 'The board itself is current (computed on demand), but closes are not being logged, scored or alerted until it runs. Check GitHub → Actions → "PrecisionTimer scan".')));
+  if (scanState && scanState.lastError) B.push(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'The last scan failed. '), `${scanState.lastError.at.slice(0, 16).replace('T', ' ')} UTC — ${scanState.lastError.message}. Nothing is being logged or alerted until it is fixed (GitHub → Actions → "PrecisionTimer scan").`)));
+  if (board.configDrift) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'Settings changed since the model was measured. '), 'The statistics shown describe the previous rules. Run the "PrecisionTimer calibrate" workflow.')));
+  if ((Date.now() - Date.parse(model.fittedThrough)) / 864e5 > 60) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'Model is ' + Math.round((Date.now() - Date.parse(model.fittedThrough)) / 864e5) + ' days old. '), 'Re-measure with the "PrecisionTimer calibrate" workflow.')));
+  if (board.noData && board.noData.length) B.push(h('div', { class: 'alert warning' }, h('span', {}, '!'), h('span', {}, h('b', {}, 'No candles for: '), board.noData.join(', ') + ' — check the tickers in pt.config.js.')));
+  $('banners').replaceChildren(...B);
+}
+
+/* ───────── market ───────── */
+function breadthChart(hist) {
+  const W = 520, H = 96, L = 4, R = 44, T = 8, B = 16, n = hist.length, x = i => L + (W - L - R) * i / Math.max(1, n - 1), y = v => T + (H - T - B) * (1 - v);
+  const pts = hist.map((d, i) => `${x(i).toFixed(1)},${y(d.breadth50 ?? 0).toFixed(1)}`).join(' ');
+  const cur = s('g', { style: 'display:none' }, s('line', { y1: T, y2: H - B, stroke: 'var(--txt3)', 'stroke-width': 1 }), s('circle', { r: 4, fill: 'var(--line)', stroke: 'var(--card)', 'stroke-width': 2 }));
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Share of the universe above its 50-day average, last ' + n + ' days' },
+    s('line', { x1: L, x2: W - R, y1: y(0.5), y2: y(0.5), stroke: 'var(--border-h)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
+    s('text', { x: W - R + 6, y: y(0.5) + 3.5 }, '50%'),
+    s('polyline', { points: pts, fill: 'none', stroke: 'var(--line)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
+    s('circle', { cx: x(n - 1), cy: y(hist[n - 1].breadth50 ?? 0), r: 4, fill: 'var(--line)', stroke: 'var(--card)', 'stroke-width': 2 }),
+    s('text', { x: L, y: H - 3 }, hist[0].day.slice(5)), s('text', { x: W - R, y: H - 3, 'text-anchor': 'end' }, hist[n - 1].day.slice(5)), cur);
+  svg.addEventListener('pointermove', e => { const r = svg.getBoundingClientRect(), i = Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width * W - L) / (W - L - R) * (n - 1)))), d = hist[i];
+    cur.style.display = ''; cur.firstChild.setAttribute('x1', x(i)); cur.firstChild.setAttribute('x2', x(i)); cur.lastChild.setAttribute('cx', x(i)); cur.lastChild.setAttribute('cy', y(d.breadth50 ?? 0));
+    showTip(e, d.day, [['Above 50-day average', pc(d.breadth50)], ['Trend', d.trend + '/3'], ['Exposure gate', d.gate]]); });
+  svg.addEventListener('pointerleave', () => { cur.style.display = 'none'; hideTip(); });
+  return svg;
+}
+function renderMarket() {
+  const m = board.market, c = m.components, st = model.market.byTrend[m.trend], g = model.market.gateCurves;
+  const fact = (ok, text) => h('div', { class: 'fact' }, h('span', { class: 'ic ' + (ok ? 'y' : 'n'), 'aria-hidden': 'true' }, ok ? '✓' : '✕'), h('span', {}, h('span', { class: 'muted' }, ok ? 'Yes — ' : 'No — '), text));
+  const cell = d => (d ? [sg(d.median), pc(d.pUp), pc(d.pDown10)] : ['—', '—', '—']);
+  const rows = [['BTC', st.BTC[30]], ['ETH', st.ETH[30]], ['Average coin on the board', st.universe[30]]].map(([n, d]) => h('tr', {}, h('td', {}, n), ...cell(d).map(v => h('td', {}, v))));
+  $('market').replaceChildren(h('h2', {}, 'Market'),
+    h('div', { class: 'hero' }, h('span', { class: 'big' }, m.trend + '/3'), h('span', { class: 'lbl' }, 'trend facts true · exposure gate '), h('span', { class: 'chip st-' + (m.gate === 'ON' ? 'good' : 'critical') }, h('span', { class: 'dot' }), `${m.gate} for ${m.gateDays} day${m.gateDays === 1 ? '' : 's'}`),
+      m.washout && h('span', { class: 'chip st-warning' }, h('span', { class: 'dot' }), 'washout: median RSI ' + m.medianRsi)),
+    h('div', { class: 'facts' },
+      fact(c.btcAbove200, `BTC closed ${sg(m.btcVs200)} vs its 200-day average`),
+      fact(c.btc30dUp, `BTC is ${sg(m.btc30d)} over 30 days`),
+      fact(c.breadthOk, `${pc(m.breadth50)} of the ${m.members} coins are above their 50-day average (needs ${pc(config.regime.breadthThreshold)})`)),
+    breadthChart(m.history),
+    h('h3', { style: 'margin-top:12px' }, `What followed the ${st.days} days like this since ${model.fittedFrom.slice(0, 4)} — next 30 days`),
+    h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Median'), h('th', {}, 'Ended higher'), h('th', {}, 'Fell 10%+'))), h('tbody', {}, rows))),
+    h('p', { class: 'note', style: 'margin-top:10px' }, `The gate is an exposure rule, not a forecast. From ${model.split} on, holding ETH only while it was ON returned ${sg(g.ETH.test.gated.totalPct, 0)} against ${sg(g.ETH.test.hold.totalPct, 0)} for buy-and-hold, with a worst drawdown of ${sg(g.ETH.test.gated.maxDrawdownPct, 0)} against ${sg(g.ETH.test.hold.maxDrawdownPct, 0)}; BTC ${sg(g.BTC.test.gated.totalPct, 0)} against ${sg(g.BTC.test.hold.totalPct, 0)}, drawdown ${sg(g.BTC.test.gated.maxDrawdownPct, 0)} against ${sg(g.BTC.test.hold.maxDrawdownPct, 0)}. It flips about ${g.ETH.test.gated.switchesPerYear} times a year and is late at both ends by design.`));
+}
+
+/* ───────── range bar ───────── */
+function rangeBar(r, k) {
+  const b = r.bands[k]; if (!b) return h('p', { class: 'note' }, 'no range (needs 90 days of history)');
+  const W = 520, H = 40, lo = Math.log(Math.min(b.p05, r.price) * 0.985), hi = Math.log(Math.max(b.p95, r.price) * 1.015), x = v => 6 + (W - 12) * (Math.log(v) - lo) / (hi - lo), Y = 8, Hb = 12;
+  // outer 80% segments: 4px rounded on the outside end only, square where they meet the 50% band (2px surface gap)
+  const segL = (a, c) => s('path', { d: `M${x(a) + 4},${Y} H${x(c)} V${Y + Hb} H${x(a) + 4} Q${x(a)},${Y + Hb} ${x(a)},${Y + Hb - 4} V${Y + 4} Q${x(a)},${Y} ${x(a) + 4},${Y} Z`, fill: 'var(--band80)' });
+  const segR = (a, c) => s('path', { d: `M${x(a)},${Y} H${x(c) - 4} Q${x(c)},${Y} ${x(c)},${Y + 4} V${Y + Hb - 4} Q${x(c)},${Y + Hb} ${x(c) - 4},${Y + Hb} H${x(a)} Z`, fill: 'var(--band80)' });
+  const g = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${r.sym} ${k}-day range: 80% between ${fp(b.p10)} and ${fp(b.p90)}` },
+    segL(b.p10, b.p25), s('rect', { x: x(b.p25) + 2, y: Y, width: Math.max(0, x(b.p75) - x(b.p25) - 4), height: Hb, fill: 'var(--band50)' }), segR(b.p75, b.p90),
+    s('line', { x1: x(b.p50), x2: x(b.p50), y1: Y - 3, y2: Y + Hb + 3, stroke: 'var(--txt)', 'stroke-width': 2 }),
+    s('circle', { cx: x(r.price), cy: Y + Hb / 2, r: 5, fill: 'var(--txt)', stroke: 'var(--card)', 'stroke-width': 2 }),
+    s('text', { x: x(b.p10), y: H - 4, 'text-anchor': 'start' }, fp(b.p10)), s('text', { x: x(b.p90), y: H - 4, 'text-anchor': 'end' }, fp(b.p90)));
+  return hover(g, `${r.sym} — close ${k} days from now`, [['95% of the time below', fp(b.p95)], ['90%', fp(b.p90)], ['75%', fp(b.p75)], ['Median', fp(b.p50)], ['25%', fp(b.p25)], ['10%', fp(b.p10)], ['5% of the time below', fp(b.p05)], ['Now', fp(r.price)]]);
+}
+const quint = q => h('span', { class: 'q', title: q ? `fifth ${q} of 5 (5 = best)` : 'not ranked' }, ...[1, 2, 3, 4, 5].map(i => h('i', { class: q && i <= q ? 'on' : '' })));
+const rankText = r => (r.rank ? `#${r.rank} of ${board.rows.length} · ${r.tier}` : 'outside today’s universe');
+
+function renderMine() {
+  const cards = board.holdings.map(sym => { const r = rowOf(sym); if (!r) return null;
+    return h('div', { class: 'coin' },
+      h('div', { class: 'h' }, h('span', {}, h('b', {}, sym), ' ', quint(r.quintile), h('span', { class: 'tag' }, rankText(r))), h('span', { class: 'p mono' }, fp(r.price))),
+      h('div', { class: 'note' }, `7d ${sg(r.chg7)} · 30d ${sg(r.chg30)} · ${sg(r.near250)} from the 250-day high · moves ${(r.sigma * 100).toFixed(1)}% a day`),
+      h('div', { class: 'rb-l' }, h('span', {}, 'Next 7 days — 80% range (bright: 50%)'), h('span', {}, 'median ' + fp(r.bands[7]?.p50))), rangeBar(r, 7),
+      h('div', { class: 'rb-l' }, h('span', {}, 'Next 30 days'), h('span', {}, 'median ' + fp(r.bands[30]?.p50))), rangeBar(r, 30),
+      h('div', { style: 'margin-top:6px' }, h('button', { onclick: () => { selected = sym; renderDetail(); $('detail').scrollIntoView({ behavior: 'smooth' }); } }, 'Levels & plan →'))); }).filter(Boolean);
+  const V = model.forecast.validation[model.forecast.validation.chosen];
+  $('mine').replaceChildren(h('h2', {}, 'Your coins'), cards.length ? h('div', { class: 'grid' }, cards) : h('p', { class: 'note' }, 'Add tickers to holdings in pt.config.js.'),
+    h('p', { class: 'note', style: 'margin-top:10px' }, `Ranges are where the close has landed historically for a coin this volatile — not a direction call. Checked on data from ${model.split} on: the 80% range held ${pc(V.bands[7].in80)} of the time at 7 days and ${pc(V.bands[30].in80)} at 30.`));
+}
+
+/* ───────── coin detail: levels + plan ───────── */
+function renderDetail() {
+  const r = rowOf(selected) || board.rows[0]; selected = r.sym;
+  const sel = h('select', { onchange: e => { selected = e.target.value; renderDetail(); renderBoard(); } }, ...all().map(x => h('option', { value: x.sym, selected: x.sym === r.sym ? '' : null }, x.sym)));
+  const lv = board.levels.filter(l => l.sym === r.sym).sort((a, b) => b.level - a.level);
+  const lvRows = lv.map(l => h('tr', {}, h('td', {}, l.label, l.kind === 'watch' ? h('span', { class: 'tag' }, 'yours') : null), h('td', {}, fp(l.level)), h('td', {}, sg(l.distPct)), h('td', {}, pc(l.touch7)), h('td', {}, pc(l.touch30) + (l.extrapolated ? '*' : ''))));
+  const out = h('div', { class: 'kv' }), lvIn = h('input', { type: 'number', step: 'any', value: +(r.price * 0.8).toPrecision(4), 'aria-label': 'price level' });
+  const calcLevel = () => { const L = +lvIn.value; if (!(L > 0)) { out.replaceChildren(h('p', { class: 'note' }, 'Enter a price.')); return; }
+    out.replaceChildren(...HORIZONS.map(k => h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(touchProb(model, r.price, L, r.sigma, k), 1)), h('div', { class: 'l' }, `trades at ${fp(L)} within ${k} days`))),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, sg((L / r.price - 1) * 100)), h('div', { class: 'l' }, 'distance from ' + fp(r.price)), isExtrapolated(r.price, L, r.sigma) ? h('div', { class: 's' }, 'beyond anything measured — extrapolated') : null)); };
+  lvIn.addEventListener('input', calcLevel);
+  const P = config.plan, eIn = h('input', { type: 'number', step: 'any', value: +r.price.toPrecision(6) }), sIn = h('input', { type: 'number', step: 'any', value: +(r.price - P.stopAtr * r.atr).toPrecision(5) }), tIn = h('input', { type: 'number', step: 'any', value: +(r.price + P.targetAtr * r.atr).toPrecision(5) });
+  const kSel = h('select', {}, ...HORIZONS.map(k => h('option', { value: k, selected: k === P.maxDays ? '' : null }, k + ' days'))), pOut = h('div', {});
+  const calcPlan = () => { const o = planOdds(model, { entry: +eIn.value, stop: +sIn.value, target: +tIn.value, sigma: r.sigma, k: +kSel.value });
+    if (!o) { pOut.replaceChildren(h('p', { class: 'note' }, 'Needs stop < entry < target.')); return; }
+    const verdict = o.expR > 0.03 ? 'Historically positive for a random coin-day with this geometry.' : o.expR < -0.03 ? 'Historically negative: the target is reached too rarely for the reward it pays.' : 'Historically about break-even.';
+    pOut.replaceChildren(h('div', { class: 'kv' },
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(o.pTarget)), h('div', { class: 'l' }, 'target first'), h('div', { class: 's' }, `needs ${pc(o.breakeven)} to break even at ${o.rr.toFixed(2)}:1`)),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(o.pStop)), h('div', { class: 'l' }, 'stop first')),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, pc(o.pOpen)), h('div', { class: 'l' }, 'neither by the time limit')),
+      h('div', { class: 'tile' }, h('div', { class: 'v' }, (o.expR >= 0 ? '+' : '−') + Math.abs(o.expR).toFixed(2) + 'R'), h('div', { class: 'l' }, 'average result per trade'), h('div', { class: 's' }, '1R = entry − stop'))),
+      h('p', { class: 'note', style: 'margin-top:8px' }, verdict + (o.clamped ? ' (Stop or target is outside the measured grid — edge value shown.)' : '') + ` Measured on every coin-day since ${model.fittedFrom.slice(0, 4)} with the same stop and target distance in units of daily volatility; rank and events shift this a little — see Events.`)); };
+  for (const el of [eIn, sIn, tIn]) el.addEventListener('input', calcPlan); kSel.addEventListener('change', calcPlan);
+  $('detail').replaceChildren(h('h2', {}, 'Coin detail'),
+    h('div', { class: 'row' }, h('label', {}, 'Coin', sel), h('span', { class: 'note' }, `${fp(r.price)} · ${rankText(r)} · moves ${(r.sigma * 100).toFixed(1)}% a day · ATR ${fp(r.atr)}`)),
+    h('div', { class: 'grid g2' },
+      h('div', {}, h('h3', {}, 'Will it trade at a level?'), lv.length ? h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Level'), h('th', {}, 'Price'), h('th', {}, 'Away'), h('th', {}, 'Within 7d'), h('th', {}, 'Within 30d'))), h('tbody', {}, lvRows))) : h('p', { class: 'note' }, 'Structure levels are listed for your holdings; any coin works in the calculator.'),
+        h('div', { class: 'row' }, h('label', {}, 'Any price (e.g. a liquidation level)', lvIn)), out,
+        h('p', { class: 'note', style: 'margin-top:8px' }, 'How often a level this many daily moves away was reached, intraday, across every coin-day measured. To be alerted on one, add it to watch in pt.config.js.')),
+      h('div', {}, h('h3', {}, 'Is a plan worth taking?'), h('div', { class: 'row' }, h('label', {}, 'Entry', eIn), h('label', {}, 'Stop', sIn), h('label', {}, 'Target', tIn), h('label', {}, 'Time limit', kSel)), pOut)));
+  calcLevel(); calcPlan();
+}
+
+/* ───────── board ───────── */
+function renderBoard() {
+  const mine = new Set([...board.holdings, ...board.track]);
+  const F = { all: () => true, leaders: r => r.tier === 'leader', laggards: r => r.tier === 'laggard', events: r => r.events.length, mine: r => mine.has(r.sym) };
+  const rows = board.rows.filter(F[filter]);
+  const tr = r => h('tr', { class: 'click' + (r.sym === selected ? ' sel' : ''), onclick: () => { selected = r.sym; renderDetail(); renderBoard(); $('detail').scrollIntoView({ behavior: 'smooth' }); } },
+    h('td', {}, h('span', { class: 'muted mono' }, String(r.rank).padStart(2, ' ') + ' '), h('b', {}, r.sym), r.events.map(e => h('span', { class: 'tag' }, e.toLowerCase()))),
+    h('td', {}, quint(r.quintile)), h('td', { class: 'mono' }, fp(r.price)), h('td', {}, sg(r.chg7)), h('td', {}, sg(r.chg30)), h('td', {}, sg(r.near250, 0)), h('td', {}, (r.sigma * 100).toFixed(1) + '%'),
+    h('td', { class: 'mono' }, r.bands[7] ? `${fp(r.bands[7].p10)} – ${fp(r.bands[7].p90)}` : '—'));
+  const Q = model.rank.horizons[30].test.quintileExcess, Q7 = model.rank.horizons[7].test;
+  $('board').replaceChildren(h('h2', {}, `Board — ${board.rows.length} coins, ranked`),
+    h('p', { class: 'note', style: 'margin-bottom:10px' }, `Rank = closeness to the 250-day high + low volatility, the only two traits that kept working on data from ${model.split} on: 30 days later the best fifth averaged ${sg(Q[4])} against the market and the worst fifth ${sg(Q[0])} (7 days: ${sg(Q7.quintileExcess[4], 2)} and ${sg(Q7.quintileExcess[0], 2)}). It says which coins to prefer, not whether the market rises — when the market falls, leaders fall less.`),
+    h('div', { class: 'btns' }, ...Object.keys(F).map(k => h('button', { class: filter === k ? 'on' : '', onclick: () => { filter = k; renderBoard(); } }, k[0].toUpperCase() + k.slice(1)))),
+    h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Rank · coin'), h('th', {}, 'Fifth'), h('th', {}, 'Price'), h('th', {}, '7d'), h('th', {}, '30d'), h('th', {}, 'From high'), h('th', {}, 'Daily move'), h('th', {}, '7-day 80% range'))), h('tbody', {}, rows.length ? rows.map(tr) : h('tr', {}, h('td', { colspan: 8, class: 'tl muted' }, 'Nothing matches this filter today.'))))));
+}
+
+/* ───────── events ───────── */
+function renderEvents() {
+  const kids = [h('h2', {}, 'Events at the last close')];
+  if (!board.events.length) kids.push(h('p', { class: 'note' }, 'None today.'));
+  const groups = {}; for (const e of board.events) (groups[e.event + '|' + e.tier] = groups[e.event + '|' + e.tier] || []).push(e);
+  for (const [k, list] of Object.entries(groups)) { const [id, tier] = k.split('|'), E = model.events.byEvent[id], a = E.tiers[tier].all, t = E.tiers[tier].test;
+    kids.push(h('h3', {}, `${E.label} · ${tier}s`), h('p', { class: 'note' }, `${E.describe}. Measured ${a.n} times (${t.n} since ${model.split}): beat the market over 7 days ${pc(a[7]?.beat)} of the time, average ${sg(a[7]?.excessMean)}; the frozen plan averaged ${a.plan ? (a.plan.meanR >= 0 ? '+' : '−') + Math.abs(a.plan.meanR).toFixed(2) + 'R' : '—'} (any coin, any day: ${model.events.plan.baseline.all.meanR.toFixed(2)}R).`),
+      h('div', { class: 'scroll' }, h('table', {}, h('tbody', {}, list.map(e => h('tr', {}, h('td', {}, h('b', {}, e.sym), h('span', { class: 'muted' }, ' #' + e.rank)), h('td', { class: 'mono' }, fp(e.close)), h('td', { class: 'mono' }, 'target ' + fp(e.plan?.target)), h('td', { class: 'mono' }, 'stop ' + fp(e.plan?.stop)))))))); }
+  if (board.market.gate === 'OFF' && board.events.length) kids.push(h('p', { class: 'note' }, 'The exposure gate is OFF — these are relative-strength facts, not a reason to add risk.'));
+  if (card && card.recentEvents && card.recentEvents.length) kids.push(h('details', { style: 'margin-top:10px' }, h('summary', {}, `Logged events and how they ended (${card.recentEvents.length} most recent)`),
+    h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Day · coin'), h('th', {}, 'Event'), h('th', {}, 'Outcome'), h('th', {}, 'R'))), h('tbody', {}, card.recentEvents.map(e => h('tr', {}, h('td', {}, e.day.slice(5) + ' ', h('b', {}, e.sym)), h('td', {}, `${e.event.toLowerCase()} · ${e.tier}`), h('td', {}, e.outcome), h('td', { class: 'mono' }, e.R === null ? '—' : (e.R >= 0 ? '+' : '') + e.R.toFixed(2)))))))));
+  if (alerts && alerts.length) kids.push(h('details', { style: 'margin-top:10px' }, h('summary', {}, `Alerts sent (${alerts.length})`), ...alerts.slice(-12).reverse().map(a => h('pre', {}, `${a.at.slice(0, 16).replace('T', ' ')} UTC${a.delivered === false ? ' — TELEGRAM FAILED' : ''}\n${a.text}`))));
+  $('events').replaceChildren(...kids);
+}
+
+/* ───────── scorecard ───────── */
+function quintileChart() {
+  const Q = model.rank.horizons[30].test.quintileExcess, W = 520, H = 146, L = 8, R = 8, mx = Math.max(...Q.map(Math.abs)), y0 = 66, sc = 44 / mx, bw = (W - L - R) / 5;
+  return s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Average 30-day return against the market by rank fifth, since ' + model.split },
+    s('line', { x1: L, x2: W - R, y1: y0, y2: y0, stroke: 'var(--border-h)', 'stroke-width': 1 }),
+    ...Q.map((v, i) => { const x = L + bw * i + bw / 2 - 12, hh = Math.max(6, Math.abs(v) * sc), up = v >= 0;
+      const bar = s('path', { d: up ? `M${x},${y0} v${-(hh - 4)} q0,-4 4,-4 h16 q4,0 4,4 v${hh - 4} Z` : `M${x},${y0} v${hh - 4} q0,4 4,4 h16 q4,0 4,-4 v${-(hh - 4)} Z`, fill: up ? 'var(--pos)' : 'var(--neg)' });
+      hover(bar, ['Worst fifth', '2nd fifth', 'Middle fifth', '4th fifth', 'Best fifth'][i], [['30 days vs market', sg(v, 2)], ['7 days vs market', sg(model.rank.horizons[7].test.quintileExcess[i], 2)], ['Beat the market (30d)', pc(model.rank.horizons[30].test.quintileBeat[i])]]);
+      return [bar, s('text', { x: x + 12, y: up ? y0 - hh - 5 : y0 + hh + 13, 'text-anchor': 'middle', style: 'fill:var(--txt)' }, sg(v)), s('text', { x: x + 12, y: H - 4, 'text-anchor': 'middle' }, ['worst fifth', '2nd', '3rd', '4th', 'best fifth'][i])]; }));
+}
+function renderScore() {
+  const V = model.forecast.validation[model.forecast.validation.chosen], kids = [h('h2', {}, 'Scorecard — is it still true?')];
+  const tile = (v, l, sub, meter) => h('div', { class: 'tile' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l), sub ? h('div', { class: 's' }, sub) : null, meter ? h('div', { class: 'meter', 'aria-hidden': 'true' }, h('b', { style: `width:${Math.min(100, meter[0] * 100)}%` }), h('u', { style: `left:${meter[1] * 100}%` })) : null);
+  if (card && card.daysLogged) {
+    const b7 = card.bands[7], b30 = card.bands[30], r7 = card.rank[7], per = (b, k) => (b.days ? `${b.n} forecasts, but only ≈${Math.max(1, Math.round(b.days / k))} separate ${k}-day periods` : 'none matured yet');
+    kids.push(h('p', { class: 'note' }, `Live since ${card.firstDay}: ${card.daysLogged} daily close${card.daysLogged === 1 ? '' : 's'} logged. Every forecast is frozen when made and scored when it matures.`),
+      h('div', { class: 'kv' },
+        tile(b7.n ? pc(b7.in80) : '—', '7-day 80% ranges that held', per(b7, 7) + ' · target 80%', b7.n ? [b7.in80, 0.8] : null),
+        tile(b30.n ? pc(b30.in80) : '—', '30-day 80% ranges that held', per(b30, 30) + ' · target 80%', b30.n ? [b30.in80, 0.8] : null),
+        tile(r7.n ? sg(r7.topExcess, 2) : '—', 'best fifth vs market, per 7 days', r7.n ? `${r7.n} days · backtest ${sg(model.rank.horizons[7].test.quintileExcess[4], 2)}` : 'none matured yet'),
+        card.gate ? tile(sg(card.gate.eth.gated), 'ETH held only while the gate was ON', `buy-and-hold ${sg(card.gate.eth.hold)} · ${card.gate.days} days, ${card.gate.switches} switches`) : null));
+    const ev = Object.entries(card.events); if (ev.length) kids.push(h('div', { class: 'scroll', style: 'margin-top:10px' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Event plans closed'), h('th', {}, 'n'), h('th', {}, 'Avg R'), h('th', {}, 'Winners'), h('th', {}, 'Backtest R'))), h('tbody', {}, ev.map(([k, e]) => { const [id, tier] = k.split('|'); return h('tr', {}, h('td', {}, `${id.toLowerCase()} · ${tier}`), h('td', {}, e.n), h('td', { class: 'mono' }, (e.meanR >= 0 ? '+' : '') + e.meanR.toFixed(2)), h('td', {}, pc(e.win)), h('td', { class: 'mono' }, (m => (m === undefined ? '—' : (m >= 0 ? '+' : '') + m.toFixed(2)))(model.events.byEvent[id]?.tiers[tier]?.all.plan?.meanR))); })))));
+  } else kids.push(h('p', { class: 'note' }, 'No live record yet. Once the hourly scan runs (README, step 2) every range, rank and event plan is frozen at the daily close and scored here when it matures — 7 days for the first numbers.'));
+  kids.push(h('h3', { style: 'margin-top:14px' }, `Before it was allowed on screen — tested on ${model.split} → ${model.fittedThrough}`),
+    h('div', { class: 'kv' }, tile(pc(V.bands[7].in80), '7-day 80% ranges held', `${V.bands[7].n.toLocaleString('en-US')} coin-days · target 80%`, [V.bands[7].in80, 0.8]), tile(pc(V.bands[30].in80), '30-day 80% ranges held', 'target 80%', [V.bands[30].in80, 0.8]),
+      tile(pc(V.plan.realisedTarget), 'plans that reached target first', `model said ${pc(V.plan.predictedTarget)} · stops ${pc(V.plan.realisedStop)} vs ${pc(V.plan.predictedStop)}`)),
+    h('div', { class: 'rb-l', style: 'margin-top:12px' }, h('span', {}, 'Average 30-day return against the market, by rank fifth')), quintileChart(),
+    h('p', { class: 'note' }, `The range tables were fitted before ${model.split} and scored after it — a true out-of-sample check. The rank and gate rules were chosen with the whole history in view, so for them this period is supporting evidence, not proof; the live record above is the independent test. `),
+    h('p', { class: 'note', style: 'margin-top:6px' }, `Model measured ${model.generatedAt.slice(0, 10)} on ${model.sample.memberDays.toLocaleString('en-US')} coin-days (${model.fittedFrom} → ${model.fittedThrough}). Full tables: `, h('a', { href: `https://github.com/${config.repo}/blob/main/model/REPORT.md` }, 'model/REPORT.md'), ' · why v11 looks like this: ', h('a', { href: `https://github.com/${config.repo}/blob/main/docs/EVIDENCE.md` }, 'docs/EVIDENCE.md'), '.'));
+  $('score').replaceChildren(...kids);
+}
+
+/* ───────── daily briefing ───────── */
+const actClass = a => ({ BUY: 'buy', ADD: 'add', HOLD: 'hold', 'HOLD HALF': 'half', TRIM: 'trim', SELL: 'sell', 'STAY OUT': 'out' }[a] || 'out');
+function signalChart(sym, s) {
+  const H = s.history, n = H.close.length; if (n < 2) return null;
+  const W = 520, Ht = 110, L = 4, R = 4, T = 8, B = 18, lo = Math.min(...H.close), hi = Math.max(...H.close);
+  const x = j => L + (W - L - R) * j / (n - 1), y = v => T + (Ht - T - B) * (1 - (Math.log(v) - Math.log(lo)) / Math.max(1e-9, Math.log(hi) - Math.log(lo)));
+  const bands = [];
+  for (let j = 0; j < n; j++) { if (!(H.x[j] > 0)) continue; let k = j; while (k + 1 < n && H.x[k + 1] === H.x[j]) k++;
+    bands.push(s_('rect', { x: x(j), y: T, width: Math.max(1, x(k) - x(j) + (W - L - R) / (n - 1)), height: Ht - T - B, fill: H.x[j] >= 1 ? 'var(--band80)' : 'var(--border-h)', opacity: H.x[j] >= 1 ? 0.55 : 0.8 })); j = k; }
+  const marks = [];
+  for (let j = 1; j < n; j++) if (H.x[j] !== H.x[j - 1]) marks.push(s_('circle', { cx: x(j), cy: y(H.close[j]), r: 4, fill: H.x[j] > H.x[j - 1] ? 'var(--good)' : 'var(--critical)', stroke: 'var(--card)', 'stroke-width': 2 }));
+  const cur = s_('g', { style: 'display:none' }, s_('line', { y1: T, y2: Ht - B, stroke: 'var(--txt3)', 'stroke-width': 1 }));
+  const svg = s_('svg', { viewBox: `0 0 ${W} ${Ht}`, role: 'img', 'aria-label': `${sym} last ${n} days with the signal's exposure shaded` }, ...bands,
+    s_('polyline', { points: H.close.map((v, j) => `${x(j).toFixed(1)},${y(v).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--line)', 'stroke-width': 2, 'stroke-linejoin': 'round' }), ...marks,
+    s_('text', { x: L, y: Ht - 4 }, H.days[0].slice(5)), s_('text', { x: W - R, y: Ht - 4, 'text-anchor': 'end' }, H.days[n - 1].slice(5)), cur);
+  svg.addEventListener('pointermove', e => { const r = svg.getBoundingClientRect(), j = Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width * W - L) / (W - L - R) * (n - 1))));
+    cur.style.display = ''; cur.firstChild.setAttribute('x1', x(j)); cur.firstChild.setAttribute('x2', x(j));
+    const ch = j > 0 && H.x[j] !== H.x[j - 1] ? (H.x[j] > H.x[j - 1] ? (H.x[j - 1] === 0 ? 'BUY' : 'ADD') : (H.x[j] === 0 ? 'SELL' : 'TRIM')) : null;
+    showTip(e, H.days[j], [['Close', fp(H.close[j])], ['Signal', Math.round(H.x[j] * 100) + '%'], ...(ch ? [['Action', ch]] : [])]); });
+  svg.addEventListener('pointerleave', () => { cur.style.display = 'none'; hideTip(); });
+  return svg;
+}
+const s_ = (tag, attrs = {}, ...kids) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) e.setAttribute(k, v); for (const c of kids.flat()) if (c) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+function renderBriefing() {
+  const sigs = board.signals || {}, syms = [...new Set([...board.holdings, ...Object.keys(sigs)])].filter(sym => sigs[sym]);
+  if (!syms.length) { $('briefing').replaceChildren(h('h2', {}, 'Daily briefing'), h('p', { class: 'note' }, 'No briefing yet — the scan has not produced signals.')); return; }
+  const changed = syms.filter(sym => sigs[sym].changedToday);
+  const cards = syms.map(sym => { const s = sigs[sym], rec = s.record, chg = s.sincePrice > 0 ? (s.price / s.sincePrice - 1) * 100 : null;
+    const why = s.mode === 'trend' ? `Market trend ${s.trend}/3 — the gate is ON.` : s.mode === 'capitulation' ? `Capitulation tranche bought ${s.cap.since} at ${fp(s.cap.entry)} (gate still OFF).` : s.exit ? `Capitulation tranche closed today (${s.exit}).` : `Market trend ${s.trend}/3 — the gate is OFF.`;
+    return h('div', { class: 'sig' + (s.changedToday ? ' chg' : '') },
+      h('div', { class: 'h' }, h('span', {}, h('b', {}, sym), ' ', h('span', { class: 'mono' }, fp(s.price))),
+        h('span', { class: 'act ' + actClass(s.action) }, h('i', { 'aria-hidden': 'true' }), s.action, ' · ', Math.round(s.exposure * 100) + '%')),
+      h('div', { class: 'note', style: 'margin-top:4px' }, why, ' ', s.changedToday ? h('b', {}, 'Changed at this close.') : `Since ${s.since} at ${fp(s.sincePrice)} (${sg(chg)}).`),
+      signalChart(sym, s),
+      h('ul', {}, ...s.next.map(n => h('li', {}, h('b', {}, n.to > s.exposure ? (s.exposure === 0 ? 'BUY ' : 'ADD ') + Math.round(n.to * 100) + '%' : (n.to === 0 ? 'SELL all' : 'TRIM')), ' when ' + n.when))),
+      rec && rec.all ? h('div', { class: 'note', style: 'margin-top:6px' }, `This rule on ${sym} since ${rec.all.from.slice(0, 4)}: ${sg(rec.all.cagrPct, 0)}/yr, worst drop ${sg(rec.all.maxDrawdownPct, 0)} — holding: ${sg(rec.all.holdCagrPct, 0)}/yr, ${sg(rec.all.holdMaxDrawdownPct, 0)}. In the market ${pc(rec.all.exposure)} of days, ~${Math.round(rec.all.changesPerYear)} changes a year.`) : null); });
+  const m = board.market;
+  $('briefing').replaceChildren(h('h2', {}, 'Daily briefing — close of ' + board.asOf),
+    h('p', { class: 'note', style: 'margin-bottom:10px' }, changed.length ? h('b', {}, `Changed today: ${changed.map(sym => `${sym} ${sigs[sym].action}`).join(', ')}. `) : 'No changes at this close. ',
+      `Market trend ${m.trend}/3, gate ${m.gate} for ${m.gateDays} days. Shaded on each chart: when the signal was in (dark = 100%, light = 50% capitulation tranche); green dot = buy, red dot = sell. It will not catch the exact top or bottom: since 2020 it caught a median 47–73% of each big rally (by coin) and took 25–48% of each big fall.`),
+    h('div', { class: 'brief' }, cards));
+}
+
+function render() {
+  renderHead(); renderBriefing(); renderMarket(); renderMine(); renderDetail(); renderBoard(); renderEvents(); renderScore();
+  $('foot').textContent = `PrecisionTimer ${board.version} · decisions use closed daily candles only; live prices are for distance and display · data: ${board.source || 'Binance spot'} · not financial advice`;
+}
+load().catch(e => { $('banners').replaceChildren(h('div', { class: 'alert critical' }, h('span', {}, '✕'), h('span', {}, h('b', {}, 'Page error. '), String(e && e.message || e)))); });
+setInterval(() => load().catch(() => {}), 5 * 60e3);
+</script>
+</body>
+</html>
