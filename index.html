@@ -73,7 +73,7 @@ footer{color:var(--txt3);font-size:12px;margin-top:22px}
 <body>
 <div class="W">
   <header>
-    <div class="logo">Precision<span>Timer</span><small>v11 · measured</small></div>
+    <div class="logo">Precision<span>Timer</span><small>v12 · measured</small></div>
     <span class="sp"></span>
     <span class="chip" id="age"><span class="dot"></span><span>loading…</span></span>
     <a class="chip" href="classic.html">Classic dashboard</a>
@@ -316,7 +316,7 @@ function renderScore() {
       tile(pc(V.plan.realisedTarget), 'plans that reached target first', `model said ${pc(V.plan.predictedTarget)} · stops ${pc(V.plan.realisedStop)} vs ${pc(V.plan.predictedStop)}`)),
     h('div', { class: 'rb-l', style: 'margin-top:12px' }, h('span', {}, 'Average 30-day return against the market, by rank fifth')), quintileChart(),
     h('p', { class: 'note' }, `The range tables were fitted before ${model.split} and scored after it — a true out-of-sample check. The rank and gate rules were chosen with the whole history in view, so for them this period is supporting evidence, not proof; the live record above is the independent test. `),
-    h('p', { class: 'note', style: 'margin-top:6px' }, `Model measured ${model.generatedAt.slice(0, 10)} on ${model.sample.memberDays.toLocaleString('en-US')} coin-days (${model.fittedFrom} → ${model.fittedThrough}). Full tables: `, h('a', { href: `https://github.com/${config.repo}/blob/main/model/REPORT.md` }, 'model/REPORT.md'), ' · why v11 looks like this: ', h('a', { href: `https://github.com/${config.repo}/blob/main/docs/EVIDENCE.md` }, 'docs/EVIDENCE.md'), '.'));
+    h('p', { class: 'note', style: 'margin-top:6px' }, `Model measured ${model.generatedAt.slice(0, 10)} on ${model.sample.memberDays.toLocaleString('en-US')} coin-days (${model.fittedFrom} → ${model.fittedThrough}). Full tables: `, h('a', { href: `https://github.com/${config.repo}/blob/main/model/REPORT.md` }, 'model/REPORT.md'), ' · why it looks like this: ', h('a', { href: `https://github.com/${config.repo}/blob/main/docs/EVIDENCE.md` }, 'docs/EVIDENCE.md'), '.'));
   $('score').replaceChildren(...kids);
 }
 
